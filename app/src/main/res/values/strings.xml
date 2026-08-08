@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AntiTheft Guard</string>
+    <string name="title_settings">Sozlamalar</string>
+    <string name="admin_description">Noto\'g\'ri parol kiritilganda surat olib, Telegram'ga yuborish uchun kerak</string>
+</resources>

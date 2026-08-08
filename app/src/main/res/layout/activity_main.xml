@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🛡️ AntiTheft Guard"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Holat kartochkasi -->
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F5F5F5"
+        android:padding="16dp"
+        android:textSize="15sp"
+        android:lineSpacingMultiplier="1.5"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Device Admin tugmasi -->
+    <Button
+        android:id="@+id/btn_admin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Device Admin'ni faollashtirish"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Kamera ruxsati -->
+    <Button
+        android:id="@+id/btn_camera"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kamera ruxsatini so'rash"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Sozlamalar -->
+    <Button
+        android:id="@+id/btn_settings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚙️ Telegram Sozlamalari"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Barcha 3 ta qadamni bajaring, keyin ilova fon rejimida ishlayveradi."
+        android:textSize="13sp"
+        android:textColor="#888888"
+        android:layout_marginTop="16dp"
+        android:gravity="center" />
+
+</LinearLayout>
