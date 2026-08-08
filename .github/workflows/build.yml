@@ -30,7 +30,21 @@ jobs:
           gradle-version: '8.4'
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set +e
+          gradle assembleDebug --stacktrace --no-daemon > gradle_output.log 2>&1
+          STATUS=$?
+          set -e
+          if [ $STATUS -ne 0 ]; then
+            echo "::group::Full gradle output"
+            cat gradle_output.log
+            echo "::endgroup::"
+            grep -iE "error|exception|FAILED|what went wrong|caused by" gradle_output.log | head -30 | while IFS= read -r line; do
+              safe=$(echo "$line" | sed 's/%/percent/g')
+              echo "::error::${safe:0:400}"
+            done
+            exit $STATUS
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
