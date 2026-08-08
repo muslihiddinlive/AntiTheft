@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -51,3 +53,13 @@ jobs:
         with:
           name: AntiTheft-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Commit APK into repo (for direct download)
+        run: |
+          mkdir -p releases
+          cp app/build/outputs/apk/debug/app-debug.apk releases/AntiTheft-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add releases/AntiTheft-debug.apk
+          git commit -m "Update built APK [skip ci]" || echo "No changes to commit"
+          git push
