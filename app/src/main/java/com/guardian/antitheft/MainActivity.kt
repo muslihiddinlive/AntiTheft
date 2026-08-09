@@ -23,9 +23,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCamera: Button
     private lateinit var btnSettings: Button
 
-    // Kamera ruxsati so'rash
-    private val cameraPermLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+    // Kamera + lokatsiya + SIM ruxsatlarini birgalikda so'rash
+    private val multiPermLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
     ) { updateStatus() }
 
     // Bildirishnoma ruxsati (API 33+)
@@ -59,11 +59,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Kamera ruxsati
+        // Kamera + lokatsiya + SIM ruxsatlari
         btnCamera.setOnClickListener {
-            when {
-                hasCameraPermission() -> updateStatus()
-                else -> cameraPermLauncher.launch(Manifest.permission.CAMERA)
+            val needed = mutableListOf<String>()
+            if (!hasCameraPermission()) needed.add(Manifest.permission.CAMERA)
+            if (!hasLocationPermission()) needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (!hasPhoneStatePermission()) needed.add(Manifest.permission.READ_PHONE_STATE)
+
+            if (needed.isNotEmpty()) {
+                multiPermLauncher.launch(needed.toTypedArray())
+            } else {
+                updateStatus()
             }
             // API 33+: bildirishnoma ruxsati ham kerak (foreground service uchun)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -90,6 +96,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateStatus() {
         val isAdmin   = dpm.isAdminActive(adminComponent)
         val hasCamera = hasCameraPermission()
+        val hasLocation = hasLocationPermission()
+        val hasPhoneState = hasPhoneStatePermission()
         val prefs     = getSharedPreferences("antitheft_prefs", MODE_PRIVATE)
         val hasToken  = !prefs.getString("bot_token", "").isNullOrEmpty()
         val hasChatId = !prefs.getString("chat_id",   "").isNullOrEmpty()
@@ -98,6 +106,8 @@ class MainActivity : AppCompatActivity() {
         tvStatus.text = buildString {
             appendLine("Device Admin : ${if (isAdmin)   "✅ Faol"       else "❌ Faol emas"}")
             appendLine("Kamera       : ${if (hasCamera) "✅ Ruxsat bor" else "❌ Ruxsat yo'q"}")
+            appendLine("Lokatsiya    : ${if (hasLocation) "✅ Ruxsat bor" else "⚪ Ixtiyoriy"}")
+            appendLine("SIM kuzatuv  : ${if (hasPhoneState) "✅ Ruxsat bor" else "⚪ Ixtiyoriy"}")
             appendLine("Bot Token    : ${if (hasToken)  "✅ Sozlangan"  else "❌ Sozlanmagan"}")
             appendLine("Chat ID      : ${if (hasChatId) "✅ Sozlangan"  else "❌ Sozlanmagan"}")
             appendLine()
@@ -107,11 +117,19 @@ class MainActivity : AppCompatActivity() {
         btnAdmin.text      = if (isAdmin)   "Admin: ✅ Faol"  else "1️⃣  Device Admin'ni faollashtirish"
         btnAdmin.isEnabled = !isAdmin
 
-        btnCamera.text      = if (hasCamera) "Kamera: ✅ Ruxsat" else "2️⃣  Kamera ruxsatini so'rash"
+        btnCamera.text      = if (hasCamera) "Kamera: ✅ Ruxsat" else "2️⃣  Kamera/Lokatsiya/SIM ruxsatlarini so'rash"
         btnCamera.isEnabled = !hasCamera
     }
 
     private fun hasCameraPermission() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun hasLocationPermission() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun hasPhoneStatePermission() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) ==
             PackageManager.PERMISSION_GRANTED
 }

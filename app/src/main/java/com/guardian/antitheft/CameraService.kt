@@ -109,7 +109,7 @@ class CameraService : Service() {
 
             val saveToGallery = prefs.getBoolean("save_to_gallery", true)
             val autoResend     = prefs.getBoolean("auto_resend", true)
-            val caption        = "⚠️ Noto'g'ri parol urinishi!"
+            val caption        = buildCaption()
 
             // Tarmoq/disk ishlari → background thread (main thread emas)
             Thread {
@@ -258,6 +258,20 @@ class CameraService : Service() {
     // ──────────────────────────────────────────────
     // Yordamchi funksiyalar
     // ──────────────────────────────────────────────
+
+    private fun buildCaption(): String {
+        val attemptText = AttemptTracker.recordAttempt(this)
+        val simChangeText = AttemptTracker.checkSimChange(this)
+        val locationText = LocationHelper.getLastLocationText(this)
+        val statusText = DeviceStatusHelper.getStatusText(this)
+
+        return buildString {
+            appendLine(attemptText)
+            if (simChangeText != null) appendLine(simChangeText)
+            appendLine(locationText)
+            append(statusText)
+        }
+    }
 
     /** Old kamera ID'sini qaytaradi; topilmasa birinchi kamerani qaytaradi */
     private fun findFrontCamera(manager: CameraManager): String? {
