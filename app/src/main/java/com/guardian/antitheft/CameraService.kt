@@ -52,7 +52,10 @@ class CameraService : Service() {
         createNotificationChannel()
     }
 
+    private var lensFacing = "front"
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lensFacing = intent?.getStringExtra("lens_facing") ?: "front"
         startForeground(NOTIF_ID, buildNotification())
         captureAndSend()
         return START_NOT_STICKY
@@ -78,7 +81,7 @@ class CameraService : Service() {
         if (token.isEmpty() || chatId.isEmpty()) { stopSelf(); return }
 
         val manager  = getSystemService(CAMERA_SERVICE) as CameraManager
-        val cameraId = findFrontCamera(manager) ?: run { stopSelf(); return }
+        val cameraId = findCamera(manager, lensFacing) ?: run { stopSelf(); return }
 
         val characteristics = try {
             manager.getCameraCharacteristics(cameraId)
@@ -260,26 +263,41 @@ class CameraService : Service() {
     // ──────────────────────────────────────────────
 
     private fun buildCaption(): String {
-        val attemptText = AttemptTracker.recordAttempt(this)
-        val simChangeText = AttemptTracker.checkSimChange(this)
-        val locationText = LocationHelper.getLastLocationText(this)
-        val statusText = DeviceStatusHelper.getStatusText(this)
+        val cameraLabel = if (lensFacing == "back") "🔙 Orqa kamera" else "🤳 Old kamera"
 
-        return buildString {
-            appendLine(attemptText)
-            if (simChangeText != null) appendLine(simChangeText)
-            appendLine(locationText)
-            append(statusText)
+        return if (lensFacing == "back") {
+            // Orqa kamera — urinishlar sonini qayta oshirmaymiz, faqat lokatsiya/holatni qo'shamiz
+            buildString {
+                appendLine(cameraLabel)
+                appendLine(LocationHelper.getLastLocationText(this@CameraService))
+                append(DeviceStatusHelper.getStatusText(this@CameraService))
+            }
+        } else {
+            val attemptText = AttemptTracker.recordAttempt(this)
+            val simChangeText = AttemptTracker.checkSimChange(this)
+            val locationText = LocationHelper.getLastLocationText(this)
+            val statusText = DeviceStatusHelper.getStatusText(this)
+
+            buildString {
+                appendLine(cameraLabel)
+                appendLine(attemptText)
+                if (simChangeText != null) appendLine(simChangeText)
+                appendLine(locationText)
+                append(statusText)
+            }
         }
     }
 
-    /** Old kamera ID'sini qaytaradi; topilmasa birinchi kamerani qaytaradi */
-    private fun findFrontCamera(manager: CameraManager): String? {
+    /** Berilgan yo'nalishdagi kamera ID'sini qaytaradi; topilmasa birinchi kamerani qaytaradi */
+    private fun findCamera(manager: CameraManager, facing: String): String? {
+        val targetFacing = if (facing == "back")
+            CameraCharacteristics.LENS_FACING_BACK
+        else
+            CameraCharacteristics.LENS_FACING_FRONT
         return try {
             manager.cameraIdList.firstOrNull { id ->
                 manager.getCameraCharacteristics(id)
-                    .get(CameraCharacteristics.LENS_FACING) ==
-                    CameraCharacteristics.LENS_FACING_FRONT
+                    .get(CameraCharacteristics.LENS_FACING) == targetFacing
             } ?: manager.cameraIdList.firstOrNull()
         } catch (e: CameraAccessException) { null }
     }

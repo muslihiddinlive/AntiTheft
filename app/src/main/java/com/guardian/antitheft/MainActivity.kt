@@ -86,6 +86,11 @@ class MainActivity : AppCompatActivity() {
         btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+
+        // Ovozli signal — telefonni topish uchun
+        findViewById<Button>(R.id.btn_alarm).setOnClickListener {
+            startService(Intent(this, AlarmService::class.java))
+        }
     }
 
     override fun onResume() {

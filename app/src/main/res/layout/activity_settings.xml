@@ -85,6 +85,30 @@
             android:layout_height="wrap_content"
             android:text="📶 Internet yo'q bo'lsa, qaytganda avtomatik yuborish"
             android:checked="true"
+            android:layout_marginBottom="12dp" />
+
+        <Switch
+            android:id="@+id/switch_dual_camera"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📷📷 Old + orqa kamera (ikkalasidan ham surat)"
+            android:checked="false"
+            android:layout_marginBottom="12dp" />
+
+        <Switch
+            android:id="@+id/switch_record_video"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎥 Suratdan tashqari qisqa video ham yozish"
+            android:checked="false"
+            android:layout_marginBottom="12dp" />
+
+        <Switch
+            android:id="@+id/switch_hide_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🙈 Ilova ikonkasini yashirish (*#*#8228#*#* bilan qaytariladi)"
+            android:checked="false"
             android:layout_marginBottom="24dp" />
 
         <!-- Saqlash -->

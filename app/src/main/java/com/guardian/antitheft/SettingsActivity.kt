@@ -18,14 +18,28 @@ class SettingsActivity : AppCompatActivity() {
         val etChatId = findViewById<EditText>(R.id.et_chat_id)
         val swGallery    = findViewById<Switch>(R.id.switch_gallery)
         val swAutoResend = findViewById<Switch>(R.id.switch_auto_resend)
+        val swDualCamera = findViewById<Switch>(R.id.switch_dual_camera)
+        val swRecordVideo = findViewById<Switch>(R.id.switch_record_video)
+        val swHideIcon   = findViewById<Switch>(R.id.switch_hide_icon)
         val btnSave  = findViewById<Button>(R.id.btn_save)
         val btnTest  = findViewById<Button>(R.id.btn_test)
 
         // Avvalgi qiymatlarni yuklash
         etToken.setText(prefs.getString("bot_token", ""))
         etChatId.setText(prefs.getString("chat_id", ""))
-        swGallery.isChecked    = prefs.getBoolean("save_to_gallery", true)
-        swAutoResend.isChecked = prefs.getBoolean("auto_resend", true)
+        swGallery.isChecked     = prefs.getBoolean("save_to_gallery", true)
+        swAutoResend.isChecked  = prefs.getBoolean("auto_resend", true)
+        swDualCamera.isChecked  = prefs.getBoolean("dual_camera", false)
+        swRecordVideo.isChecked = prefs.getBoolean("record_video", false)
+        swHideIcon.isChecked    = IconVisibility.isHidden(this)
+
+        // Ikonkani darhol yashirish/ko'rsatish
+        swHideIcon.setOnCheckedChangeListener { _, isChecked ->
+            IconVisibility.setHidden(this, isChecked)
+            if (isChecked) {
+                toast("Ikonka yashirildi. Qaytarish uchun terish ekranida *#*#8228#*#* tering")
+            }
+        }
 
         // Saqlash
         btnSave.setOnClickListener {
@@ -42,6 +56,8 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("chat_id",   chatId)
                 .putBoolean("save_to_gallery", swGallery.isChecked)
                 .putBoolean("auto_resend", swAutoResend.isChecked)
+                .putBoolean("dual_camera", swDualCamera.isChecked)
+                .putBoolean("record_video", swRecordVideo.isChecked)
                 .apply()
 
             toast("✅ Saqlandi")
