@@ -62,6 +62,31 @@
             android:singleLine="true"
             android:layout_marginBottom="24dp" />
 
+        <!-- Qo'shimcha sozlamalar -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Qo'shimcha"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/switch_gallery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📷 Suratni galereyaga ham saqlash"
+            android:checked="true"
+            android:layout_marginBottom="12dp" />
+
+        <Switch
+            android:id="@+id/switch_auto_resend"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📶 Internet yo'q bo'lsa, qaytganda avtomatik yuborish"
+            android:checked="true"
+            android:layout_marginBottom="24dp" />
+
         <!-- Saqlash -->
         <Button
             android:id="@+id/btn_save"

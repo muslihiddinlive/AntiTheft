@@ -3,6 +3,7 @@ package com.guardian.antitheft
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
@@ -15,12 +16,16 @@ class SettingsActivity : AppCompatActivity() {
         val prefs    = getSharedPreferences("antitheft_prefs", MODE_PRIVATE)
         val etToken  = findViewById<EditText>(R.id.et_token)
         val etChatId = findViewById<EditText>(R.id.et_chat_id)
+        val swGallery    = findViewById<Switch>(R.id.switch_gallery)
+        val swAutoResend = findViewById<Switch>(R.id.switch_auto_resend)
         val btnSave  = findViewById<Button>(R.id.btn_save)
         val btnTest  = findViewById<Button>(R.id.btn_test)
 
         // Avvalgi qiymatlarni yuklash
         etToken.setText(prefs.getString("bot_token", ""))
         etChatId.setText(prefs.getString("chat_id", ""))
+        swGallery.isChecked    = prefs.getBoolean("save_to_gallery", true)
+        swAutoResend.isChecked = prefs.getBoolean("auto_resend", true)
 
         // Saqlash
         btnSave.setOnClickListener {
@@ -35,6 +40,8 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit()
                 .putString("bot_token", token)
                 .putString("chat_id",   chatId)
+                .putBoolean("save_to_gallery", swGallery.isChecked)
+                .putBoolean("auto_resend", swAutoResend.isChecked)
                 .apply()
 
             toast("✅ Saqlandi")

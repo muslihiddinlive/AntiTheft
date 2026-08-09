@@ -8,12 +8,22 @@
 
     <!-- Tarmoq -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Foreground service -->
+    <!-- Galereyaga saqlash (API 28 va pastda kerak; API 29+ da scoped storage) -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Foreground service (internet kutish xizmati uchun ham) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- API 34+ uchun kamera foreground service -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_CAMERA"
+        android:minSdkVersion="34" />
+    <!-- API 34+ uchun navbatni internet qaytganda yuborish xizmati -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
         android:minSdkVersion="34" />
 
     <!-- Bildirishnomalar (API 33+) -->
@@ -61,6 +71,21 @@
             android:name=".CameraService"
             android:foregroundServiceType="camera"
             android:exported="false" />
+
+        <!-- Internet yo'q bo'lganda navbatga qo'yilgan suratlarni kuzatib, qaytganda yuboradi -->
+        <service
+            android:name=".PendingSendService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Qurilma qayta ishga tushganda navbatni tekshirib chiqadi -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

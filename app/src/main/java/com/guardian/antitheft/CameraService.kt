@@ -107,14 +107,29 @@ class CameraService : Service() {
             image.close()
             releaseCamera()
 
-            // Tarmoq → background thread (main thread emas)
+            val saveToGallery = prefs.getBoolean("save_to_gallery", true)
+            val autoResend     = prefs.getBoolean("auto_resend", true)
+            val caption        = "⚠️ Noto'g'ri parol urinishi!"
+
+            // Tarmoq/disk ishlari → background thread (main thread emas)
             Thread {
-                TelegramSender.sendPhoto(
+                if (saveToGallery) {
+                    GallerySaver.save(applicationContext, bytes)
+                }
+
+                val sent = TelegramSender.sendPhoto(
                     token   = token,
                     chatId  = chatId,
                     photo   = bytes,
-                    caption = "⚠️ Noto'g'ri parol urinishi!"
+                    caption = caption
                 )
+
+                if (!sent && autoResend) {
+                    // Internet yo'q yoki xato — keyinroq yuborish uchun navbatga qo'yamiz
+                    PendingQueue.enqueue(applicationContext, bytes, caption)
+                    PendingSendService.start(applicationContext)
+                }
+
                 stopSelf()
             }.start()
         }, cameraHandler)
