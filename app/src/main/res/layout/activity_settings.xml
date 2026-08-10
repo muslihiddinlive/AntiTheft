@@ -109,6 +109,14 @@
             android:layout_height="wrap_content"
             android:text="🙈 Ilova ikonkasini yashirish (*#*#8228#*#* bilan qaytariladi)"
             android:checked="false"
+            android:layout_marginBottom="12dp" />
+
+        <Switch
+            android:id="@+id/switch_remote_commands"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🤖 Bot buyruqlari (/alarm, /status) — uzoqdan boshqarish"
+            android:checked="false"
             android:layout_marginBottom="24dp" />
 
         <!-- Saqlash -->

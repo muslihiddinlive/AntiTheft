@@ -21,6 +21,7 @@ class SettingsActivity : AppCompatActivity() {
         val swDualCamera = findViewById<Switch>(R.id.switch_dual_camera)
         val swRecordVideo = findViewById<Switch>(R.id.switch_record_video)
         val swHideIcon   = findViewById<Switch>(R.id.switch_hide_icon)
+        val swRemoteCommands = findViewById<Switch>(R.id.switch_remote_commands)
         val btnSave  = findViewById<Button>(R.id.btn_save)
         val btnTest  = findViewById<Button>(R.id.btn_test)
 
@@ -32,6 +33,7 @@ class SettingsActivity : AppCompatActivity() {
         swDualCamera.isChecked  = prefs.getBoolean("dual_camera", true)
         swRecordVideo.isChecked = prefs.getBoolean("record_video", true)
         swHideIcon.isChecked    = IconVisibility.isHidden(this)
+        swRemoteCommands.isChecked = prefs.getBoolean("remote_commands", false)
 
         // Ikonkani darhol yashirish/ko'rsatish
         swHideIcon.setOnCheckedChangeListener { _, isChecked ->
@@ -58,7 +60,12 @@ class SettingsActivity : AppCompatActivity() {
                 .putBoolean("auto_resend", swAutoResend.isChecked)
                 .putBoolean("dual_camera", swDualCamera.isChecked)
                 .putBoolean("record_video", swRecordVideo.isChecked)
+                .putBoolean("remote_commands", swRemoteCommands.isChecked)
                 .apply()
+
+            if (swRemoteCommands.isChecked) {
+                BotCommandListener.start(this)
+            }
 
             toast("✅ Saqlandi")
             finish()

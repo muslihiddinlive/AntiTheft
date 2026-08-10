@@ -126,6 +126,12 @@
             android:name=".AlarmService"
             android:exported="false" />
 
+        <!-- Telegram bot buyruqlarini kuzatish (uzoqdan boshqarish) -->
+        <service
+            android:name=".BotCommandListener"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -137,9 +137,14 @@ class CameraService : Service() {
                 // Kamera apparati to'liq bo'shashi uchun qisqa kutish (aks holda keyingi
                 // kamerani ochish "band" xatosi bilan sukut saqlab muvaffaqiyatsiz tugaydi)
                 Thread.sleep(700)
-                triggerNextStep()
+                val continuingSameInstance = triggerNextStep()
 
-                stopSelf()
+                // MUHIM: agar orqa kamera shu xizmat nusxasida davom etsa, stopSelf()
+                // chaqirmaymiz — aks holda Android bitta Service klassidan faqat bitta
+                // nusxa saqlagani uchun, orqa kamerani ham birga o'chirib qo'yardi.
+                if (!continuingSameInstance) {
+                    stopSelf()
+                }
             }.start()
         }, cameraHandler)
 
@@ -268,20 +273,25 @@ class CameraService : Service() {
     // Yordamchi funksiyalar
     // ──────────────────────────────────────────────
 
-    /** Kamera bo'shagach, navbatdagi qadamni (orqa kamera yoki video) ketma-ket ishga tushiradi */
-    private fun triggerNextStep() {
+    /**
+     * Kamera bo'shagach, navbatdagi qadamni (orqa kamera yoki video) ketma-ket ishga tushiradi.
+     * @return true — orqa kamera SHU xizmat nusxasida davom etadi (stopSelf chaqirmaslik kerak)
+     */
+    private fun triggerNextStep(): Boolean {
         val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
 
         if (lensFacing == "front" && prefs.getBoolean("dual_camera", true)) {
             startForegroundService(
                 Intent(this, CameraService::class.java).putExtra("lens_facing", "back")
             )
-            return
+            return true
         }
 
         if (prefs.getBoolean("record_video", true)) {
+            // Video alohida Service klassi — shu nusxani birga o'chirib qo'ymaydi
             startForegroundService(Intent(this, VideoCaptureService::class.java))
         }
+        return false
     }
 
     private fun buildCaption(): String {
