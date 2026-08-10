@@ -134,6 +134,9 @@ class CameraService : Service() {
                 }
 
                 // Kamera bo'shadi — endi navbatdagi qadamni ishga tushiramiz (parallel emas, ketma-ket)
+                // Kamera apparati to'liq bo'shashi uchun qisqa kutish (aks holda keyingi
+                // kamerani ochish "band" xatosi bilan sukut saqlab muvaffaqiyatsiz tugaydi)
+                Thread.sleep(700)
                 triggerNextStep()
 
                 stopSelf()
