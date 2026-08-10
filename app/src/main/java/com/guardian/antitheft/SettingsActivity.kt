@@ -29,8 +29,8 @@ class SettingsActivity : AppCompatActivity() {
         etChatId.setText(prefs.getString("chat_id", ""))
         swGallery.isChecked     = prefs.getBoolean("save_to_gallery", true)
         swAutoResend.isChecked  = prefs.getBoolean("auto_resend", true)
-        swDualCamera.isChecked  = prefs.getBoolean("dual_camera", false)
-        swRecordVideo.isChecked = prefs.getBoolean("record_video", false)
+        swDualCamera.isChecked  = prefs.getBoolean("dual_camera", true)
+        swRecordVideo.isChecked = prefs.getBoolean("record_video", true)
         swHideIcon.isChecked    = IconVisibility.isHidden(this)
 
         // Ikonkani darhol yashirish/ko'rsatish

@@ -92,7 +92,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="📷📷 Old + orqa kamera (ikkalasidan ham surat)"
-            android:checked="false"
+            android:checked="true"
             android:layout_marginBottom="12dp" />
 
         <Switch
@@ -100,7 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="🎥 Suratdan tashqari qisqa video ham yozish"
-            android:checked="false"
+            android:checked="true"
             android:layout_marginBottom="12dp" />
 
         <Switch

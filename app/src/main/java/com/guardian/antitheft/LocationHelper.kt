@@ -3,38 +3,91 @@ package com.guardian.antitheft
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
+import android.os.HandlerThread
 import androidx.core.content.ContextCompat
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 object LocationHelper {
 
-    /** Ruxsat bo'lsa, oxirgi ma'lum joylashuvni Google Maps havolasi shaklida qaytaradi */
+    private const val FRESH_FIX_TIMEOUT_SEC = 8L
+
+    /**
+     * Ruxsat bo'lsa, yangi (faol so'ralgan) joylashuvni Google Maps havolasi shaklida qaytaradi.
+     * Chaqiruvchi background thread'da bo'lishi shart (bloklovchi funksiya).
+     */
     fun getLastLocationText(context: Context): String {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            return "📍 Lokatsiya: ruxsat berilmagan"
+        if (!hasPermission(context)) return "📍 Lokatsiya: ruxsat berilmagan"
+
+        val fresh = requestFreshLocation(context)
+        if (fresh != null) {
+            return "📍 Lokatsiya: https://maps.google.com/?q=${fresh.latitude},${fresh.longitude}"
         }
 
+        val cached = getBestCachedLocation(context)
+        return if (cached != null) {
+            "📍 Lokatsiya: https://maps.google.com/?q=${cached.latitude},${cached.longitude} (eski)"
+        } else {
+            "📍 Lokatsiya: hozircha noma'lum (GPS signal yo'q)"
+        }
+    }
+
+    private fun hasPermission(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /** Bir necha soniya kutib, yangi GPS/tarmoq lokatsiyasini so'raydi */
+    private fun requestFreshLocation(context: Context): Location? {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val providers = lm.getProviders(true)
+        if (providers.isEmpty()) return null
+
+        val thread = HandlerThread("LocationFix").apply { start() }
+        val latch = CountDownLatch(1)
+        var result: Location? = null
+
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                result = location
+                latch.countDown()
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
+
+        try {
+            for (provider in providers) {
+                try {
+                    lm.requestLocationUpdates(provider, 0L, 0f, listener, thread.looper)
+                } catch (e: SecurityException) { /* ruxsat yo'q */ }
+            }
+            latch.await(FRESH_FIX_TIMEOUT_SEC, TimeUnit.SECONDS)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            try { lm.removeUpdates(listener) } catch (e: Exception) { }
+            thread.quitSafely()
+        }
+
+        return result
+    }
+
+    private fun getBestCachedLocation(context: Context): Location? {
         return try {
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val providers = lm.getProviders(true)
-            var best: android.location.Location? = null
-            for (provider in providers) {
+            var best: Location? = null
+            for (provider in lm.getProviders(true)) {
                 val loc = try { lm.getLastKnownLocation(provider) } catch (e: SecurityException) { null }
-                if (loc != null && (best == null || loc.accuracy < best!!.accuracy)) {
-                    best = loc
-                }
+                if (loc != null && (best == null || loc.accuracy < best!!.accuracy)) best = loc
             }
-            if (best != null) {
-                "📍 Lokatsiya: https://maps.google.com/?q=${best.latitude},${best.longitude}"
-            } else {
-                "📍 Lokatsiya: hozircha noma'lum (GPS signal yo'q)"
-            }
-        } catch (e: Exception) {
-            "📍 Lokatsiya: xato (${e.message})"
-        }
+            best
+        } catch (e: Exception) { null }
     }
 }

