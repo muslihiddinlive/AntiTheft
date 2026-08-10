@@ -133,6 +133,9 @@ class CameraService : Service() {
                     PendingSendService.start(applicationContext)
                 }
 
+                // Kamera bo'shadi — endi navbatdagi qadamni ishga tushiramiz (parallel emas, ketma-ket)
+                triggerNextStep()
+
                 stopSelf()
             }.start()
         }, cameraHandler)
@@ -261,6 +264,22 @@ class CameraService : Service() {
     // ──────────────────────────────────────────────
     // Yordamchi funksiyalar
     // ──────────────────────────────────────────────
+
+    /** Kamera bo'shagach, navbatdagi qadamni (orqa kamera yoki video) ketma-ket ishga tushiradi */
+    private fun triggerNextStep() {
+        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+
+        if (lensFacing == "front" && prefs.getBoolean("dual_camera", true)) {
+            startForegroundService(
+                Intent(this, CameraService::class.java).putExtra("lens_facing", "back")
+            )
+            return
+        }
+
+        if (prefs.getBoolean("record_video", true)) {
+            startForegroundService(Intent(this, VideoCaptureService::class.java))
+        }
+    }
 
     private fun buildCaption(): String {
         val cameraLabel = if (lensFacing == "back") "🔙 Orqa kamera" else "🤳 Old kamera"

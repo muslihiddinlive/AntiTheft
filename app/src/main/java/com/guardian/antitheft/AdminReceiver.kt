@@ -39,19 +39,12 @@ class AdminReceiver : DeviceAdminReceiver() {
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 
-        // Faqat sozlamalar to'liq bo'lganda ishga tushir
+        // Faqat sozlamalar to'liq bo'lganda ishga tushir.
+        // Kamera bir vaqtda faqat bitta dastur tomonidan ishlatilishi mumkin,
+        // shuning uchun old kamera, orqa kamera va video KETMA-KET ishga tushiriladi
+        // (CameraService o'zi tugagach keyingisini boshlaydi — pastga qarang).
         if (token.isNotEmpty() && chatId.isNotEmpty()) {
             context.startForegroundService(Intent(context, CameraService::class.java))
-
-            if (prefs.getBoolean("dual_camera", true)) {
-                context.startForegroundService(
-                    Intent(context, CameraService::class.java)
-                        .putExtra("lens_facing", "back")
-                )
-            }
-            if (prefs.getBoolean("record_video", true)) {
-                context.startForegroundService(Intent(context, VideoCaptureService::class.java))
-            }
         }
     }
 }
