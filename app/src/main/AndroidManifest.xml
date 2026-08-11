@@ -39,6 +39,23 @@
     <!-- Ovozli signal uchun tebranish -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Mikrofon (audio yozish uchun) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- API 34+ uchun mikrofon foreground service -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"
+        android:minSdkVersion="34" />
+
+    <!-- Background joylashuv (Android 10+, LocationTrackingService uchun) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- API 34+ uchun location foreground service -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_LOCATION"
+        android:minSdkVersion="34" />
+
+    <!-- MIUI/Xiaomi battery optimization whitelist so'rash uchun -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Device Admin -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -131,6 +148,37 @@
             android:name=".BotCommandListener"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+
+        <!-- Yon tugma orqali audio yozib olish xizmati -->
+        <service
+            android:name=".AudioRecordService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <!-- Joylashuvni doim kuzatib boruvchi xizmat (trigger bo'lganda tez javob berish uchun) -->
+        <service
+            android:name=".LocationTrackingService"
+            android:foregroundServiceType="location"
+            android:exported="false" />
+
+        <!--
+            Yon tugma shortcut'lari:
+              3x Volume Up   → audio yozish
+              3x Volume Down → video yozish
+              2x Down + hold → panik signal (ovoz + video + joylashuv)
+            Foydalanuvchi Sozlamalar → Maxsus imkoniyatlar dan qo'lda yoqishi shart.
+        -->
+        <service
+            android:name=".VolumeKeyAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service" />
+        </service>
 
     </application>
 

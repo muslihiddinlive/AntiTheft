@@ -105,13 +105,46 @@ class BotCommandListener : Service() {
     private fun handleCommand(text: String, token: String, chatId: String) {
         when (text.lowercase()) {
             "/alarm", "/signal" -> {
-                startService(Intent(this, AlarmService::class.java))
+                startForegroundService(Intent(this, AlarmService::class.java))
                 TelegramSender.sendMessage(token, chatId, "🔊 Signal chalindi!")
             }
             "/status" -> {
-                val statusText = DeviceStatusHelper.getStatusText(this)
-                val locText = LocationHelper.getLastLocationText(this)
-                TelegramSender.sendMessage(token, chatId, "$statusText\n$locText")
+                Thread {
+                    val statusText = DeviceStatusHelper.getStatusText(this)
+                    val locText    = LocationHelper.getLastLocationText(this)
+                    TelegramSender.sendMessage(token, chatId, "$statusText\n$locText")
+                }.start()
+            }
+            "/location", "/loc" -> {
+                Thread {
+                    val locText = LocationHelper.getLastLocationText(this)
+                    TelegramSender.sendMessage(token, chatId, locText)
+                }.start()
+            }
+            "/photo", "/snap" -> {
+                startForegroundService(Intent(this, CameraService::class.java))
+                TelegramSender.sendMessage(token, chatId, "📸 Surat olinmoqda...")
+            }
+            "/video" -> {
+                startForegroundService(Intent(this, VideoCaptureService::class.java))
+                TelegramSender.sendMessage(token, chatId, "🎥 Video yozilmoqda...")
+            }
+            "/audio", "/listen" -> {
+                startForegroundService(Intent(this, AudioRecordService::class.java))
+                TelegramSender.sendMessage(token, chatId, "🎙️ Audio yozilmoqda...")
+            }
+            "/help" -> {
+                val help = """
+                    🛡️ AntiTheft Guard buyruqlari:
+                    /status — qurilma holati + joylashuv
+                    /location — faqat joylashuv
+                    /photo — surat ol (old + orqa)
+                    /video — qisqa video yoz
+                    /audio — ovoz yozish
+                    /alarm — jiringlatish
+                    /help — shu ro'yxat
+                """.trimIndent()
+                TelegramSender.sendMessage(token, chatId, help)
             }
             // /lock va /wipe keyingi bosqichda PIN tasdig'i bilan qo'shiladi
         }

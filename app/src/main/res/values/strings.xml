@@ -3,4 +3,6 @@
     <string name="app_name">AntiTheft Guard v1.3</string>
     <string name="title_settings">Sozlamalar</string>
     <string name="admin_description">Noto\'g\'ri parol kiritilganda surat olib, Telegram\'ga yuborish uchun kerak</string>
+    <string name="accessibility_service_description">Yon tugmalar orqali maxfiy signal yuborish (3x up = audio, 3x down = video, 2x+hold = panik)</string>
+    <string name="accessibility_service_summary">Yon tugma shortcut\'lari</string>
 </resources>

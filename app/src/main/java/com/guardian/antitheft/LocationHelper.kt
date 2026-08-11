@@ -15,13 +15,29 @@ object LocationHelper {
 
     private const val FRESH_FIX_TIMEOUT_SEC = 8L
 
+    // LocationTrackingService yozgan cache 10 daqiqagacha yangi hisoblanadi
+    private const val CACHE_MAX_AGE_MS = 10 * 60 * 1000L
+
     /**
-     * Ruxsat bo'lsa, yangi (faol so'ralgan) joylashuvni Google Maps havolasi shaklida qaytaradi.
+     * Ruxsat bo'lsa, joylashuvni Google Maps havolasi shaklida qaytaradi.
+     * Avval LocationTrackingService'ning tezkor cache'ini tekshiradi,
+     * yo'q bo'lsa yangi GPS fix so'raydi.
      * Chaqiruvchi background thread'da bo'lishi shart (bloklovchi funksiya).
      */
     fun getLastLocationText(context: Context): String {
         if (!hasPermission(context)) return "📍 Lokatsiya: ruxsat berilmagan"
 
+        // 1) Tezkor yo'l: LocationTrackingService'ning SharedPrefs cache'i
+        val prefs = context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val lat   = prefs.getString("cached_lat", null)?.toDoubleOrNull()
+        val lng   = prefs.getString("cached_lng", null)?.toDoubleOrNull()
+        val ts    = prefs.getLong("cached_loc_ts", 0L)
+        if (lat != null && lng != null && System.currentTimeMillis() - ts < CACHE_MAX_AGE_MS) {
+            val ageMin = (System.currentTimeMillis() - ts) / 60_000
+            return "📍 Lokatsiya: https://maps.google.com/?q=$lat,$lng (${ageMin}d oldin)"
+        }
+
+        // 2) Cache yo'q yoki eskirgan — yangi GPS fix so'raymiz
         val fresh = requestFreshLocation(context)
         if (fresh != null) {
             return "📍 Lokatsiya: https://maps.google.com/?q=${fresh.latitude},${fresh.longitude}"

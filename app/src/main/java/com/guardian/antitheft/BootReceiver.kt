@@ -18,6 +18,8 @@ class BootReceiver : BroadcastReceiver() {
             if (prefs.getBoolean("remote_commands", false)) {
                 BotCommandListener.start(context)
             }
+            // Joylashuvni doim kuzatib turadi (tezkor trigger uchun)
+            LocationTrackingService.start(context)
         }
     }
 }

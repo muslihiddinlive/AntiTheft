@@ -122,6 +122,53 @@ object TelegramSender {
     }
 
     /**
+     * Audio/ovoz yozuvini yuboradi (masalan yon tugma orqali yozilgan qisqa klip)
+     */
+    fun sendAudio(
+        token: String,
+        chatId: String,
+        audio: ByteArray,
+        caption: String = ""
+    ): Boolean {
+        val boundary = "===Boundary${System.currentTimeMillis()}==="
+        val apiUrl   = "https://api.telegram.org/bot$token/sendAudio"
+
+        return try {
+            val conn = (URL(apiUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput      = true
+                connectTimeout = TIMEOUT_MS
+                readTimeout    = 30_000
+                setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            }
+
+            DataOutputStream(conn.outputStream).use { out ->
+                out.writeField(boundary, "chat_id", chatId)
+                out.writeField(boundary, "caption", caption)
+
+                out.writeBytes("--$boundary\r\n")
+                out.writeBytes(
+                    "Content-Disposition: form-data; " +
+                    "name=\"audio\"; filename=\"voice.m4a\"\r\n"
+                )
+                out.writeBytes("Content-Type: audio/mp4\r\n\r\n")
+                out.write(audio)
+                out.writeBytes("\r\n")
+                out.writeBytes("--$boundary--\r\n")
+                out.flush()
+            }
+
+            val code = conn.responseCode
+            conn.disconnect()
+            code in 200..299
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /**
      * Faqat matn xabari yuboradi (test uchun)
      */
     fun sendMessage(token: String, chatId: String, text: String): Boolean {
