@@ -6,27 +6,33 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
-import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * Telegram bot buyruqlarini kuzatib turadi (long polling).
- * Hozircha: /alarm — ovozli signal chalish.
- * Keyingi bosqichda: /lock, /wipe (PIN tasdig'i bilan) qo'shiladi.
+ *
+ * Arxitektura:
+ *  - pollThread  : Telegram'dan yangi update'larni oladi va commandQueue'ga qo'shadi
+ *  - workerThread: commandQueue'dan buyruqlarni bittadan o'qib, ketma-ket bajaradi
+ *
+ * Shu tufayli bir buyruq tugamay ikkinchisi kelsa ham conflict bo'lmaydi —
+ * navbatga tushadi va o'z vaqtida bajariladi.
  */
 class BotCommandListener : Service() {
 
-    private lateinit var thread: HandlerThread
-    private lateinit var handler: Handler
+    // Triple<text, token, chatId>
+    private val commandQueue = LinkedBlockingQueue<Triple<String, String, String>>(50)
+
     @Volatile private var running = false
+    private var pollThread:   Thread? = null
+    private var workerThread: Thread? = null
 
     companion object {
-        private const val CHANNEL_ID = "antitheft_bot_channel"
-        private const val NOTIF_ID = 45
+        private const val CHANNEL_ID       = "antitheft_bot_channel"
+        private const val NOTIF_ID         = 45
         private const val POLL_TIMEOUT_SEC = 25
 
         fun start(context: Context) {
@@ -36,8 +42,6 @@ class BotCommandListener : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        thread = HandlerThread("BotListener").also { it.start() }
-        handler = Handler(thread.looper)
         createNotificationChannel()
     }
 
@@ -45,7 +49,7 @@ class BotCommandListener : Service() {
         startForeground(NOTIF_ID, buildNotification())
         if (!running) {
             running = true
-            handler.post { pollLoop() }
+            startThreads()
         }
         return START_STICKY
     }
@@ -53,10 +57,28 @@ class BotCommandListener : Service() {
     override fun onDestroy() {
         super.onDestroy()
         running = false
-        thread.quitSafely()
+        // workerThread'ni uyg'otish uchun poison pill
+        commandQueue.offer(Triple("__STOP__", "", ""))
+        pollThread?.interrupt()
+        workerThread?.interrupt()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // ── Thread boshqaruvi ──────────────────────────────────────────────────────
+
+    private fun startThreads() {
+        pollThread = Thread({ pollLoop() }, "BotPoll").apply {
+            isDaemon = true
+            start()
+        }
+        workerThread = Thread({ workerLoop() }, "BotWorker").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    // ── Poll loop (faqat update oladi, hech narsa bajarmaydi) ─────────────────
 
     private fun pollLoop() {
         val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
@@ -67,7 +89,6 @@ class BotCommandListener : Service() {
             val chatId  = prefs.getString("chat_id", "").orEmpty()
 
             if (!enabled || token.isEmpty() || chatId.isEmpty()) {
-                // O'chirilgan bo'lsa, xizmatni to'xtatamiz — internet/batareyani tejash uchun
                 running = false
                 stopSelf()
                 return
@@ -76,50 +97,67 @@ class BotCommandListener : Service() {
             val lastUpdateId = prefs.getLong("last_update_id", 0L)
 
             try {
-                val response = getUpdates(token, lastUpdateId + 1)
-                if (response != null) {
-                    val results = response.getJSONArray("result")
-                    for (i in 0 until results.length()) {
-                        val update = results.getJSONObject(i)
-                        val updateId = update.getLong("update_id")
+                val response = getUpdates(token, lastUpdateId + 1) ?: continue
+                val results  = response.getJSONArray("result")
 
-                        val message = update.optJSONObject("message")
-                        val fromChatId = message?.optJSONObject("chat")?.optString("id")
-                        val text = message?.optString("text")?.trim()
+                for (i in 0 until results.length()) {
+                    val update     = results.getJSONObject(i)
+                    val updateId   = update.getLong("update_id")
+                    val message    = update.optJSONObject("message")
+                    val fromChatId = message?.optJSONObject("chat")?.optString("id")
+                    val text       = message?.optString("text")?.trim()
 
-                        if (fromChatId == chatId && text != null) {
-                            handleCommand(text, token, chatId)
+                    if (fromChatId == chatId && !text.isNullOrEmpty()) {
+                        // Navbat to'liq bo'lsa yangi buyruqni tashlaymiz (xavfsizlik)
+                        if (!commandQueue.offer(Triple(text, token, chatId))) {
+                            TelegramSender.sendMessage(token, chatId,
+                                "⚠️ Navbat to'liq, buyruq qabul qilinmadi. Biroz kuting.")
                         }
-
-                        prefs.edit().putLong("last_update_id", updateId).apply()
                     }
+                    prefs.edit().putLong("last_update_id", updateId).apply()
                 }
+
+            } catch (e: InterruptedException) {
+                break
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Internet yo'q yoki xato — biroz kutib qayta urinamiz
-                Thread.sleep(5000)
+                safeSleep(5_000)
             }
         }
     }
 
-    private fun handleCommand(text: String, token: String, chatId: String) {
+    // ── Worker loop (navbatdagi buyruqlarni bittadan bajaradi) ────────────────
+
+    private fun workerLoop() {
+        while (running) {
+            try {
+                val (text, token, chatId) = commandQueue.take()
+                if (text == "__STOP__") break
+                executeCommand(text, token, chatId)
+            } catch (e: InterruptedException) {
+                break
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // ── Buyruq bajaruvchi ─────────────────────────────────────────────────────
+
+    private fun executeCommand(text: String, token: String, chatId: String) {
         when (text.lowercase()) {
             "/alarm", "/signal" -> {
                 startForegroundService(Intent(this, AlarmService::class.java))
                 TelegramSender.sendMessage(token, chatId, "🔊 Signal chalindi!")
             }
             "/status" -> {
-                Thread {
-                    val statusText = DeviceStatusHelper.getStatusText(this)
-                    val locText    = LocationHelper.getLastLocationText(this)
-                    TelegramSender.sendMessage(token, chatId, "$statusText\n$locText")
-                }.start()
+                val statusText = DeviceStatusHelper.getStatusText(this)
+                val locText    = LocationHelper.getLastLocationText(this)
+                TelegramSender.sendMessage(token, chatId, "$statusText\n$locText")
             }
             "/location", "/loc" -> {
-                Thread {
-                    val locText = LocationHelper.getLastLocationText(this)
-                    TelegramSender.sendMessage(token, chatId, locText)
-                }.start()
+                val locText = LocationHelper.getLastLocationText(this)
+                TelegramSender.sendMessage(token, chatId, locText)
             }
             "/photo", "/snap" -> {
                 startForegroundService(Intent(this, CameraService::class.java))
@@ -150,24 +188,25 @@ class BotCommandListener : Service() {
         }
     }
 
+    // ── Yordamchi ─────────────────────────────────────────────────────────────
+
     private fun getUpdates(token: String, offset: Long): org.json.JSONObject? {
-        val url = URL(
-            "https://api.telegram.org/bot$token/getUpdates" +
-                "?offset=$offset&timeout=$POLL_TIMEOUT_SEC"
-        )
+        val url  = URL("https://api.telegram.org/bot$token/getUpdates?offset=$offset&timeout=$POLL_TIMEOUT_SEC")
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
-            readTimeout = (POLL_TIMEOUT_SEC + 10) * 1000
+            readTimeout    = (POLL_TIMEOUT_SEC + 10) * 1_000
         }
         return try {
-            val code = conn.responseCode
-            if (code !in 200..299) return null
-            val body = conn.inputStream.bufferedReader().readText()
-            org.json.JSONObject(body)
+            if (conn.responseCode !in 200..299) return null
+            org.json.JSONObject(conn.inputStream.bufferedReader().readText())
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun safeSleep(ms: Long) {
+        try { Thread.sleep(ms) } catch (_: InterruptedException) { }
     }
 
     private fun createNotificationChannel() {
