@@ -31,12 +31,16 @@ class VideoCaptureService : Service() {
     private var recordingStarted = false
 
     companion object {
-        private const val CHANNEL_ID = "antitheft_video_channel"
-        private const val NOTIF_ID = 44
-        private const val MIN_WARMUP_FRAMES = 15
-        private const val WARMUP_TIMEOUT_MS = 1500L
-        private const val RECORD_DURATION_MS = 3000L
+        private const val CHANNEL_ID          = "antitheft_video_channel"
+        private const val NOTIF_ID            = 44
+        private const val MIN_WARMUP_FRAMES   = 15
+        private const val WARMUP_TIMEOUT_MS   = 1500L
+        const val  EXTRA_DURATION_SEC         = "duration_sec"
+        private const val DEFAULT_DURATION_S  = 15   // default 15 soniya
+        private const val MAX_DURATION_S      = 60   // maksimum 60 soniya
     }
+
+    private var recordDurationMs = DEFAULT_DURATION_S * 1000L
 
     override fun onCreate() {
         super.onCreate()
@@ -46,6 +50,8 @@ class VideoCaptureService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val reqSec = intent?.getIntExtra(EXTRA_DURATION_SEC, DEFAULT_DURATION_S) ?: DEFAULT_DURATION_S
+        recordDurationMs = reqSec.coerceIn(3, MAX_DURATION_S) * 1000L
         startForeground(NOTIF_ID, buildNotification())
         startCapture()
         return START_NOT_STICKY
@@ -181,7 +187,7 @@ class VideoCaptureService : Service() {
             mediaRecorder!!.start()
             session.setRepeatingRequest(recordRequest, null, cameraHandler)
 
-            cameraHandler.postDelayed({ finishRecording() }, RECORD_DURATION_MS)
+            cameraHandler.postDelayed({ finishRecording() }, recordDurationMs)
         } catch (e: Exception) {
             e.printStackTrace()
             stopSelf()
@@ -201,8 +207,24 @@ class VideoCaptureService : Service() {
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 
         Thread {
-            if (file != null && file.exists() && token.isNotEmpty() && chatId.isNotEmpty()) {
-                TelegramSender.sendVideo(token, chatId, file.readBytes(), "🎥 Video (3 soniya)")
+            if (file != null && file.exists() && file.length() > 1024 &&
+                token.isNotEmpty() && chatId.isNotEmpty()
+            ) {
+                val durationSec = recordDurationMs / 1000
+                val caption = "🎥 Video ($durationSec soniya)"
+                val sent = TelegramSender.sendVideo(token, chatId, file.readBytes(), caption)
+                if (!sent) {
+                    // Tarmoq muammosi — PendingQueue'ga qo'sh, keyinroq yuboriladi
+                    PendingQueue.enqueue(this, PendingItem.Video(file.absolutePath, caption))
+                } else {
+                    file.delete()
+                }
+            } else if (file != null && file.exists()) {
+                // Fayl juda kichik yoki bo'sh — xabar yubor
+                if (token.isNotEmpty() && chatId.isNotEmpty()) {
+                    TelegramSender.sendMessage(token, chatId,
+                        "⚠️ Video fayl juda kichik (${file.length()} bayt). Kamera ochilmagan bo'lishi mumkin.")
+                }
                 file.delete()
             }
             stopSelf()

