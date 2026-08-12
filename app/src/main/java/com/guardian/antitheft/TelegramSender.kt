@@ -91,7 +91,11 @@ object TelegramSender {
                 requestMethod = "POST"
                 doOutput      = true
                 connectTimeout = TIMEOUT_MS
-                readTimeout    = 30_000
+                readTimeout    = 120_000   // 2 daqiqa — katta video uchun
+                setFixedLengthStreamingMode(
+                    // multipart overhead taxminan 300 bayt
+                    video.size.toLong() + 512
+                )
                 setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             }
 

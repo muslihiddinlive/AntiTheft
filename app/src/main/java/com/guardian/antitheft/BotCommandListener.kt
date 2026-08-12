@@ -189,11 +189,22 @@ class BotCommandListener : Service() {
                     /video [soniya] — video yoz (masalan: /video 30, default 15s)
                     /audio — ovoz yozish
                     /alarm — jiringlatish
+                    /lock — ekranni darhol qulflash
                     /help — shu ro'yxat
                 """.trimIndent()
                 TelegramSender.sendMessage(token, chatId, help)
             }
-            // /lock va /wipe keyingi bosqichda PIN tasdig'i bilan qo'shiladi
+            "/lock" -> {
+                val dpm = getSystemService(android.app.admin.DevicePolicyManager::class.java)
+                val admin = android.content.ComponentName(this, AdminReceiver::class.java)
+                if (dpm.isAdminActive(admin)) {
+                    TelegramSender.sendMessage(token, chatId, "🔒 Qurilma qulflanyapti...")
+                    dpm.lockNow()
+                } else {
+                    TelegramSender.sendMessage(token, chatId,
+                        "⚠️ Device Admin yoqilmagan. Ilovani ochib Device Admin'ni yoqing.")
+                }
+            }
         }
     }
 
