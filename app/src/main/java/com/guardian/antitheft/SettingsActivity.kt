@@ -13,7 +13,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        val prefs    = getSharedPreferences("antitheft_prefs", MODE_PRIVATE)
+        val prefs    = SecurePrefs.get(this)
         val etToken  = findViewById<EditText>(R.id.et_token)
         val etChatId = findViewById<EditText>(R.id.et_chat_id)
         val swGallery    = findViewById<Switch>(R.id.switch_gallery)

@@ -81,7 +81,7 @@ class BotCommandListener : Service() {
     // ── Poll loop (faqat update oladi, hech narsa bajarmaydi) ─────────────────
 
     private fun pollLoop() {
-        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
 
         while (running) {
             val enabled = prefs.getBoolean("remote_commands", false)

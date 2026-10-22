@@ -44,7 +44,7 @@ class AudioRecordService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startRecording() {
-        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
         val token = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id", "").orEmpty()
         if (token.isEmpty() || chatId.isEmpty()) { stopSelf(); return }
@@ -80,7 +80,7 @@ class AudioRecordService : Service() {
         recorder = null
 
         val file = outputFile
-        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
         val token = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id", "").orEmpty()
 
