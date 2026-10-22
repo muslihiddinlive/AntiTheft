@@ -14,7 +14,7 @@ class BootReceiver : BroadcastReceiver() {
             if (PendingQueue.hasPending(context)) {
                 PendingSendService.start(context)
             }
-            val prefs = context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+            val prefs = SecurePrefs.get(context)
             if (prefs.getBoolean("remote_commands", false)) {
                 BotCommandListener.start(context)
             }

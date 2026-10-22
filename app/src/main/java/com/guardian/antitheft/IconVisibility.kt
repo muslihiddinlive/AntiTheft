@@ -18,11 +18,11 @@ object IconVisibility {
             alias, newState, PackageManager.DONT_KILL_APP
         )
 
-        context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        SecurePrefs.get(context)
             .edit().putBoolean("icon_hidden", hidden).apply()
     }
 
     fun isHidden(context: Context): Boolean =
-        context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        SecurePrefs.get(context)
             .getBoolean("icon_hidden", false)
 }

@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         val hasCamera = hasCameraPermission()
         val hasLocation = hasLocationPermission()
         val hasPhoneState = hasPhoneStatePermission()
-        val prefs     = getSharedPreferences("antitheft_prefs", MODE_PRIVATE)
+        val prefs     = SecurePrefs.get(this)
         val hasToken  = !prefs.getString("bot_token", "").isNullOrEmpty()
         val hasChatId = !prefs.getString("chat_id",   "").isNullOrEmpty()
         val allReady  = isAdmin && hasCamera && hasToken && hasChatId

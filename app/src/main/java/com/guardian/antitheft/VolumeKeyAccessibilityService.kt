@@ -101,7 +101,7 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         startForegroundServiceSafely(Intent(this, VideoCaptureService::class.java))
 
         Thread {
-            val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+            val prefs = SecurePrefs.get(this)
             val token = prefs.getString("bot_token", "").orEmpty()
             val chatId = prefs.getString("chat_id", "").orEmpty()
             if (token.isNotEmpty() && chatId.isNotEmpty()) {

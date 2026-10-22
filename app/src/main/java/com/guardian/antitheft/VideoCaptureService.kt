@@ -66,7 +66,7 @@ class VideoCaptureService : Service() {
     override fun onBind(intent: Intent?) = null
 
     private fun startCapture() {
-        val prefs  = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs  = SecurePrefs.get(this)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
         if (token.isEmpty() || chatId.isEmpty()) { stopSelf(); return }
@@ -202,7 +202,7 @@ class VideoCaptureService : Service() {
         releaseCameraOnly()
 
         val file = outputFile
-        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 

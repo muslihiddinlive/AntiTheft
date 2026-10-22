@@ -73,7 +73,7 @@ class PendingSendService : Service() {
         if (flushing) return
         flushing = true
         Thread {
-            val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+            val prefs = SecurePrefs.get(this)
             val token = prefs.getString("bot_token", "").orEmpty()
             val chatId = prefs.getString("chat_id", "").orEmpty()
 

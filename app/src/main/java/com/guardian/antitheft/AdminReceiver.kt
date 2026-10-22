@@ -18,7 +18,7 @@ class AdminReceiver : DeviceAdminReceiver() {
 
     /** Kimdir Device Admin huquqini o'chirib, ilovani deinstall qilishga uringanda chaqiriladi */
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence {
-        val prefs = context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(context)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 
@@ -35,7 +35,7 @@ class AdminReceiver : DeviceAdminReceiver() {
     }
 
     private fun triggerCapture(context: Context) {
-        val prefs = context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(context)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 

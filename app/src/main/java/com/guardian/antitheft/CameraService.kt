@@ -74,7 +74,7 @@ class CameraService : Service() {
     // ──────────────────────────────────────────────
 
     private fun captureAndSend() {
-        val prefs  = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs  = SecurePrefs.get(this)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
 
@@ -278,7 +278,7 @@ class CameraService : Service() {
      * @return true — orqa kamera SHU xizmat nusxasida davom etadi (stopSelf chaqirmaslik kerak)
      */
     private fun triggerNextStep(): Boolean {
-        val prefs = getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(this)
 
         if (lensFacing == "front" && prefs.getBoolean("dual_camera", true)) {
             startForegroundService(

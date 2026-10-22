@@ -8,7 +8,6 @@ import androidx.core.content.ContextCompat
 
 object AttemptTracker {
 
-    private const val PREFS = "antitheft_prefs"
     private const val KEY_COUNT = "attempt_count"
     private const val KEY_LAST_TS = "attempt_last_ts"
     private const val KEY_SIM_ID = "known_sim_id"
@@ -17,7 +16,7 @@ object AttemptTracker {
 
     /** Yangi noto'g'ri urinishni qayd qiladi va tavsif matnini qaytaradi */
     fun recordAttempt(context: Context): String {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(context)
         val now = System.currentTimeMillis()
         val lastTs = prefs.getLong(KEY_LAST_TS, 0)
         val prevCount = prefs.getInt(KEY_COUNT, 0)
@@ -39,7 +38,7 @@ object AttemptTracker {
     /** SIM karta almashtirilganmi tekshiradi; almashtirilgan bo'lsa xabar matnini qaytaradi, aks holda null */
     fun checkSimChange(context: Context): String? {
         val simId = getCurrentSimId(context) ?: return null
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(context)
         val knownId = prefs.getString(KEY_SIM_ID, null)
 
         if (knownId == null) {

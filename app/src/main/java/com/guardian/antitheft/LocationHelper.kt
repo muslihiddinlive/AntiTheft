@@ -28,7 +28,7 @@ object LocationHelper {
         if (!hasPermission(context)) return "📍 Lokatsiya: ruxsat berilmagan"
 
         // 1) Tezkor yo'l: LocationTrackingService'ning SharedPrefs cache'i
-        val prefs = context.getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        val prefs = SecurePrefs.get(context)
         val lat   = prefs.getString("cached_lat", null)?.toDoubleOrNull()
         val lng   = prefs.getString("cached_lng", null)?.toDoubleOrNull()
         val ts    = prefs.getLong("cached_loc_ts", 0L)

@@ -121,7 +121,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun saveToCache(location: Location) {
-        getSharedPreferences("antitheft_prefs", Context.MODE_PRIVATE)
+        SecurePrefs.get(this)
             .edit()
             .putString("cached_lat",  location.latitude.toString())
             .putString("cached_lng",  location.longitude.toString())
