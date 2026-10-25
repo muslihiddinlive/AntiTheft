@@ -21,11 +21,13 @@ import android.os.Bundle
  */
 class ScreenRecordPermissionActivity : Activity() {
 
-    private var durationSec = 20
+    private var durationSec  = 20
+    private var sendTelegram = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        durationSec = intent.getIntExtra(ScreenRecordService.EXTRA_DURATION_SEC, 20)
+        durationSec  = intent.getIntExtra(ScreenRecordService.EXTRA_DURATION_SEC, 20)
+        sendTelegram = intent.getBooleanExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, false)
         val mpm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         @Suppress("DEPRECATION")
         startActivityForResult(mpm.createScreenCaptureIntent(), REQ)
@@ -40,15 +42,16 @@ class ScreenRecordPermissionActivity : Activity() {
                     putExtra(ScreenRecordService.EXTRA_CODE, resultCode)
                     putExtra(ScreenRecordService.EXTRA_DATA, data)
                     putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
+                    putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, sendTelegram)
                 }
             )
         } else {
             val prefs  = SecurePrefs.get(this)
             val token  = prefs.getString("bot_token", "").orEmpty()
             val chatId = prefs.getString("chat_id",   "").orEmpty()
-            if (token.isNotEmpty() && chatId.isNotEmpty()) {
+            if (sendTelegram && token.isNotEmpty() && chatId.isNotEmpty()) {
                 TelegramSender.sendMessage(token, chatId,
-                    "⚠️ Ekran yozuvi uchun ruxsat berilmadi (dialog yopildi yoki \"Rad etish\" bosildi).")
+                    "⚠️ Ekran yozuvi uchun ruxsat berilmadi.")
             }
         }
         finish()

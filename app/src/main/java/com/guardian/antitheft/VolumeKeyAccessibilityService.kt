@@ -113,18 +113,17 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
     }
 
     private fun triggerScreenRecord() {
-        // To'g'ridan-to'g'ri xizmat emas — avval tizimning MediaProjection
-        // ruxsat dialogini ochadigan shaffof Activity orqali o'tadi.
+        val prefs = SecurePrefs.get(this)
+        val dur   = prefs.getInt("screen_record_duration_sec", SCREEN_RECORD_DEFAULT_SEC)
         try {
             startActivity(
                 Intent(this, ScreenRecordPermissionActivity::class.java).apply {
-                    putExtra(ScreenRecordService.EXTRA_DURATION_SEC, SCREEN_RECORD_DEFAULT_SEC)
+                    putExtra(ScreenRecordService.EXTRA_DURATION_SEC, dur)
+                    putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, false)  // lokal, Telegram'ga ketmaydi
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             )
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun triggerPanicSignal() {

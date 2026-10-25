@@ -1,10 +1,7 @@
 package com.guardian.antitheft
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Switch
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -22,8 +19,26 @@ class SettingsActivity : AppCompatActivity() {
         val swRecordVideo = findViewById<Switch>(R.id.switch_record_video)
         val swHideIcon   = findViewById<Switch>(R.id.switch_hide_icon)
         val swRemoteCommands = findViewById<Switch>(R.id.switch_remote_commands)
+        val spinnerDuration = findViewById<Spinner>(R.id.spinner_screen_duration)
         val btnSave  = findViewById<Button>(R.id.btn_save)
         val btnTest  = findViewById<Button>(R.id.btn_test)
+
+        // Ekran yozuvi muddati variantlari
+        val durationOptions = listOf(
+            "30 soniya"  to 30,
+            "1 daqiqa"   to 60,
+            "5 daqiqa"   to 300,
+            "15 daqiqa"  to 900,
+            "30 daqiqa"  to 1800,
+            "1 soat"     to 3600,
+            "2 soat"     to 7200,
+            "5 soat"     to 18000
+        )
+        ArrayAdapter(this, android.R.layout.simple_spinner_item,
+            durationOptions.map { it.first }).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinnerDuration.adapter = it
+        }
 
         // Avvalgi qiymatlarni yuklash
         etToken.setText(prefs.getString("bot_token", ""))
@@ -34,6 +49,10 @@ class SettingsActivity : AppCompatActivity() {
         swRecordVideo.isChecked = prefs.getBoolean("record_video", true)
         swHideIcon.isChecked    = IconVisibility.isHidden(this)
         swRemoteCommands.isChecked = prefs.getBoolean("remote_commands", false)
+        spinnerDuration.setSelection(
+            durationOptions.indexOfFirst { it.second == prefs.getInt("screen_record_duration_sec", 60) }
+                .coerceAtLeast(0)
+        )
 
         // Ikonkani darhol yashirish/ko'rsatish
         swHideIcon.setOnCheckedChangeListener { _, isChecked ->
@@ -61,6 +80,8 @@ class SettingsActivity : AppCompatActivity() {
                 .putBoolean("dual_camera", swDualCamera.isChecked)
                 .putBoolean("record_video", swRecordVideo.isChecked)
                 .putBoolean("remote_commands", swRemoteCommands.isChecked)
+                .putInt("screen_record_duration_sec",
+                    durationOptions[spinnerDuration.selectedItemPosition].second)
                 .apply()
 
             if (swRemoteCommands.isChecked) {

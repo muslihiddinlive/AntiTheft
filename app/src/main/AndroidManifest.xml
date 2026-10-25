@@ -36,6 +36,8 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
         android:minSdkVersion="34" />
+    <!-- Old kamera PiP overlay uchun (ScreenRecordService ichida Settings.canDrawOverlays bilan tekshiriladi) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Bildirishnomalar (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -151,6 +153,11 @@
         <service
             android:name=".ScreenRecordService"
             android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
+        <!-- Ekran yozuvlarini ko'rish ekrani -->
+        <activity
+            android:name=".RecordingsActivity"
             android:exported="false" />
 
         <!-- Shaffof Activity — tizimning MediaProjection ruxsat dialogini ochadi -->

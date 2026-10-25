@@ -161,9 +161,11 @@ class BotCommandListener : Service() {
         // /screenrecord alohida — duration parametr oladi (/screenrecord 30)
         if (cmd.startsWith("/screenrecord") || cmd.startsWith("/screen")) {
             val parts       = cmd.split("\\s+".toRegex())
-            val durationSec = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(5, 60) ?: 20
+            val durationSec = parts.getOrNull(1)?.toIntOrNull()
+                ?.coerceIn(5, ScreenRecordService.MAX_DURATION_S) ?: 20
             val permIntent  = Intent(this, ScreenRecordPermissionActivity::class.java).apply {
                 putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
+                putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, true)  // bot → Telegram'ga yuboriladi
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(permIntent)

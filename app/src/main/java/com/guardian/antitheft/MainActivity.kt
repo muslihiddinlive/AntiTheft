@@ -87,6 +87,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        // Ekran yozuvlarini ko'rish
+        findViewById<Button>(R.id.btn_recordings).setOnClickListener {
+            startActivity(Intent(this, RecordingsActivity::class.java))
+        }
+
         // Ovozli signal — telefonni topish uchun
         findViewById<Button>(R.id.btn_alarm).setOnClickListener {
             startService(Intent(this, AlarmService::class.java))
