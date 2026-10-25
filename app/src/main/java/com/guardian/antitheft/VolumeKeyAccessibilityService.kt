@@ -10,6 +10,12 @@ import android.view.accessibility.AccessibilityEvent
 /**
  * Yon (volume) tugma orqali maxfiy signal berish:
  *   - 3x tez Volume Up   -> qisqa audio yozish (AudioRecordService)
+ *   - Volume Up bosib ushlab turish (~0.7s, tez-tez bosilmagan holda)
+ *     -> ekran yozuvi (ScreenRecordPermissionActivity orqali). DIQQAT:
+ *     bu kombinatsiya faqat tizimning MediaProjection ruxsat dialogini
+ *     ochadi — dialogni bosish hali ham qurilmani ushlab turgan odamdan
+ *     talab qilinadi, buni Android talab qiladi va avtomatlashtirib
+ *     bo'lmaydi.
  *   - 3x tez Volume Down -> qisqa video yozish (VideoCaptureService)
  *   - Volume Down 2x tez + 3-marta bosib ushlab turish -> to'liq panik signal
  *     (signal ovozi + video + joylashuv, Telegram'ga)
@@ -24,6 +30,7 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
 
     private val upTaps = mutableListOf<Long>()
     private val downTaps = mutableListOf<Long>()
+    private var upPressStartedAt = 0L
     private var downPressStartedAt = 0L
 
     companion object {
@@ -31,6 +38,7 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         private const val HOLD_THRESHOLD_MS = 700L
         private const val REQUIRED_TAPS = 3
         private const val HOLD_REQUIRES_PRIOR_TAPS = 2
+        private const val SCREEN_RECORD_DEFAULT_SEC = 20
     }
 
     override fun onServiceConnected() {
@@ -46,10 +54,18 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
                 if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    upPressStartedAt = now
                     registerTap(upTaps, now)
                     if (countRecent(upTaps, now) >= REQUIRED_TAPS) {
                         upTaps.clear()
                         triggerAudio()
+                    }
+                } else if (event.action == KeyEvent.ACTION_UP) {
+                    val heldMs = if (upPressStartedAt > 0) now - upPressStartedAt else 0L
+                    // Yakka, uzoq bosish (tez-tez bosilgan combo'ning bir qismi bo'lmasa) -> ekran yozuvi
+                    if (heldMs >= HOLD_THRESHOLD_MS && countRecent(upTaps, now) <= 1) {
+                        upTaps.clear()
+                        triggerScreenRecord()
                     }
                 }
             }
@@ -94,6 +110,21 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
 
     private fun triggerVideo() {
         startForegroundServiceSafely(Intent(this, VideoCaptureService::class.java))
+    }
+
+    private fun triggerScreenRecord() {
+        // To'g'ridan-to'g'ri xizmat emas — avval tizimning MediaProjection
+        // ruxsat dialogini ochadigan shaffof Activity orqali o'tadi.
+        try {
+            startActivity(
+                Intent(this, ScreenRecordPermissionActivity::class.java).apply {
+                    putExtra(ScreenRecordService.EXTRA_DURATION_SEC, SCREEN_RECORD_DEFAULT_SEC)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun triggerPanicSignal() {
