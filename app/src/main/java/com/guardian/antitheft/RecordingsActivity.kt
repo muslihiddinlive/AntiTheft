@@ -1,6 +1,6 @@
 package com.guardian.antitheft
 
-import android.media.MediaController
+import android.widget.MediaController
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
