@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Yangilanish APK fayllari uchun (UpdateChecker) -->
+    <files-path name="updates"    path="updates/" />
+    <!-- Ekran yozuvlari uchun (kelajakda share qilish zarur bo'lsa) -->
+    <files-path name="recordings" path="recordings/" />
+</paths>

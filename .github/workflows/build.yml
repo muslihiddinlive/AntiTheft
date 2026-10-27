@@ -67,12 +67,27 @@ jobs:
           name: AntiTheft-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Commit APK into repo (for direct download)
+      - name: Commit APK + version.json into repo (for direct download)
         run: |
           mkdir -p releases
           cp app/build/outputs/apk/debug/app-debug.apk releases/AntiTheft-debug.apk
+
+          # version.json — UpdateChecker bu faylni o'qib yangilanish borligini tekshiradi
+          VERSION_CODE=$(grep 'versionCode' app/build.gradle | grep -v '//' | tr -dc '0-9')
+          VERSION_NAME=$(grep 'versionName' app/build.gradle | grep -v '//' | sed 's/.*"\(.*\)".*/\1/' | head -1)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          APK_URL="https://raw.githubusercontent.com/muslihiddinlive/AntiTheft/${BRANCH}/releases/AntiTheft-debug.apk"
+          cat > version.json << VEOF
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${VERSION_NAME}",
+            "apkUrl": "${APK_URL}",
+            "changelog": "Ekran yozuvi (lokal + bot), Yozuvlar ekrani, auto-update"
+          }
+          VEOF
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add releases/AntiTheft-debug.apk
+          git add releases/AntiTheft-debug.apk version.json
           git commit -m "Update built APK [skip ci]" || echo "No changes to commit"
           git push

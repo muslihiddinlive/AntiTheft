@@ -36,8 +36,8 @@
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
         android:minSdkVersion="34" />
-    <!-- Old kamera PiP overlay uchun (ScreenRecordService ichida Settings.canDrawOverlays bilan tekshiriladi) -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Auto-update: yangi APK o'rnatish uchun -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Bildirishnomalar (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -167,6 +167,17 @@
             android:theme="@style/Theme.Transparent"
             android:taskAffinity=""
             android:excludeFromRecents="true" />
+
+        <!-- Auto-update: APK fayllarini tizimga berish uchun FileProvider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Telegram bot buyruqlarini kuzatish (uzoqdan boshqarish) -->
         <service

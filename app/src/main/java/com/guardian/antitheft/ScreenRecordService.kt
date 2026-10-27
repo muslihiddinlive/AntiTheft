@@ -1,47 +1,32 @@
 package com.guardian.antitheft
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.graphics.PixelFormat
-import android.hardware.camera2.*
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
-import android.provider.Settings
 import android.util.DisplayMetrics
-import android.view.Gravity
-import android.view.Surface
-import android.view.TextureView
 import android.view.WindowManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Ekranni yozib, ilovaning ichki xotirasiga saqlaydi.
- *   - sendToTelegram = false (lokal trigger): faqat filesDir/recordings/ ga saqlaydi
- *   - sendToTelegram = true  (bot buyrug'i): saqlaydi + Telegram'ga ham yuboradi
- *
- * Maksimal muddat: 18 000 s (5 soat). Galereya va tashqi xotiraga HECH NARSA yozilmaydi.
- *
- * Old kamera PiP overlay: agar SYSTEM_ALERT_WINDOW ruxsati berilgan bo'lsa,
- * ekranning pastki o'ng burchagida kichik TextureView overlay ochiladi va
- * VirtualDisplay uni avtomatik yozib oladi — alohida muxer kerak emas.
+ * Ekranni yozib oladi. Kamera overlay yo'q — faqat sof ekran yozuvi.
+ *   sendToTelegram = false → filesDir/recordings/ ga saqlaydi, Telegram'ga ketmaydi
+ *   sendToTelegram = true  → saqlaydi + Telegram'ga ham yuboradi (bot buyrug'i)
  */
 class ScreenRecordService : Service() {
 
-    // ── Yozuv holati ────────────────────────────────────────────────
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaRecorder: MediaRecorder? = null
@@ -49,13 +34,6 @@ class ScreenRecordService : Service() {
     private val stopHandler = Handler(Looper.getMainLooper())
     private var recordDurationMs = DEFAULT_DURATION_S * 1000L
     private var sendToTelegram = false
-
-    // ── Kamera PiP ──────────────────────────────────────────────────
-    private var cameraDevice: CameraDevice? = null
-    private var captureSession: CameraCaptureSession? = null
-    private var overlayView: TextureView? = null
-    private val cameraThread = HandlerThread("CamOverlay").also { it.start() }
-    private val cameraHandler = Handler(cameraThread.looper)
 
     companion object {
         const val ACTION_START        = "action_start"
@@ -68,10 +46,8 @@ class ScreenRecordService : Service() {
         private const val CHANNEL_ID         = "antitheft_screenrec_channel"
         private const val NOTIF_ID           = 46
         private const val DEFAULT_DURATION_S = 20
-        const val MAX_DURATION_S             = 18_000   // 5 soat
+        const val MAX_DURATION_S             = 18_000
         private const val SCALE              = 0.6
-        private const val PIP_WIDTH_DP       = 120
-        private const val PIP_HEIGHT_DP      = 160
 
         @Volatile var isRunning = false
     }
@@ -85,11 +61,11 @@ class ScreenRecordService : Service() {
             ACTION_STOP  -> { finishRecording(); return START_NOT_STICKY }
             ACTION_START -> {
                 if (isRunning) return START_NOT_STICKY
-                val code    = intent.getIntExtra(EXTRA_CODE, 0)
+                val code = intent.getIntExtra(EXTRA_CODE, 0)
                 @Suppress("DEPRECATION")
-                val data    = intent.getParcelableExtra<Intent>(EXTRA_DATA)
-                sendToTelegram = intent.getBooleanExtra(EXTRA_SEND_TELEGRAM, false)
-                recordDurationMs = intent.getIntExtra(EXTRA_DURATION_SEC, DEFAULT_DURATION_S)
+                val data = intent.getParcelableExtra<Intent>(EXTRA_DATA)
+                sendToTelegram    = intent.getBooleanExtra(EXTRA_SEND_TELEGRAM, false)
+                recordDurationMs  = intent.getIntExtra(EXTRA_DURATION_SEC, DEFAULT_DURATION_S)
                     .coerceIn(5, MAX_DURATION_S) * 1000L
                 if (data == null) { stopSelf(); return START_NOT_STICKY }
                 startCapture(code, data)
@@ -103,12 +79,10 @@ class ScreenRecordService : Service() {
         super.onDestroy()
         isRunning = false
         stopHandler.removeCallbacksAndMessages(null)
-        releaseCamera()
-        releaseScreen()
-        cameraThread.quitSafely()
+        releaseAll()
     }
 
-    // ── Yozishni boshlash ────────────────────────────────────────────
+    // ── Yozuv ────────────────────────────────────────────────────────
 
     private fun startCapture(resultCode: Int, data: Intent) {
         val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -121,9 +95,7 @@ class ScreenRecordService : Service() {
         (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(metrics)
         val width   = ((metrics.widthPixels  * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
         val height  = ((metrics.heightPixels * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
-        val density = metrics.densityDpi
 
-        // Saqlash joyi — ilovaning ichki xotirasi, galereya ko'rmaydi
         val dir = File(filesDir, "recordings").also { it.mkdirs() }
         val ts  = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         outputFile = File(dir, "screen_$ts.mp4")
@@ -143,27 +115,21 @@ class ScreenRecordService : Service() {
 
         try {
             virtualDisplay = mediaProjection!!.createVirtualDisplay(
-                "AntiTheftSR", width, height, density,
+                "AntiTheftSR", width, height, metrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mediaRecorder!!.surface, null, null
             )
             mediaRecorder!!.start()
             isRunning = true
-        } catch (e: Exception) { e.printStackTrace(); releaseScreen(); stopSelf(); return }
-
-        // Kamera PiP overlay — SYSTEM_ALERT_WINDOW ruxsati bo'lsa qo'shiladi
-        addCameraOverlay(metrics)
+        } catch (e: Exception) { e.printStackTrace(); releaseAll(); stopSelf(); return }
 
         stopHandler.postDelayed({ finishRecording() }, recordDurationMs)
     }
-
-    // ── Yozishni yakunlash ───────────────────────────────────────────
 
     private fun finishRecording() {
         if (!isRunning) { stopSelf(); return }
         isRunning = false
         stopHandler.removeCallbacksAndMessages(null)
-        releaseCamera()
 
         try { mediaRecorder?.stop()    } catch (e: Exception) { }
         try { mediaRecorder?.release() } catch (e: Exception) { }
@@ -198,95 +164,13 @@ class ScreenRecordService : Service() {
                     if (!ok) TelegramSender.sendMessage(token, chatId,
                         "⚠️ Ekran yozuvi ($sizeMb MB) yuborilmadi — fayl ilovada saqlanib qoldi.")
                 }
-                // sendToTelegram = false: faylni ilovada saqlab, hech narsa qilmaymiz
+                // sendToTelegram=false: ilovada saqlanib qoladi
             }
             stopSelf()
         }.start()
     }
 
-    // ── Kamera PiP overlay ───────────────────────────────────────────
-
-    private fun addCameraOverlay(metrics: DisplayMetrics) {
-        if (!Settings.canDrawOverlays(this)) return  // ruxsat yo'q — shunchaki o'tkazamiz
-        val wm  = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val d   = metrics.density
-        val pw  = (PIP_WIDTH_DP  * d).toInt()
-        val ph  = (PIP_HEIGHT_DP * d).toInt()
-
-        val tv = TextureView(this)
-        overlayView = tv
-
-        val lp = WindowManager.LayoutParams(
-            pw, ph,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = (16 * d).toInt()
-            y = (80 * d).toInt()
-        }
-
-        try { wm.addView(tv, lp) } catch (e: Exception) { e.printStackTrace(); return }
-
-        tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) =
-                openFrontCamera(st)
-            override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
-            override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
-            override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun openFrontCamera(st: android.graphics.SurfaceTexture) {
-        val cm = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val frontId = cm.cameraIdList.firstOrNull { id ->
-            cm.getCameraCharacteristics(id)
-                .get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
-        } ?: return
-
-        try {
-            cm.openCamera(frontId, object : CameraDevice.StateCallback() {
-                override fun onOpened(cam: CameraDevice) {
-                    cameraDevice = cam
-                    val surface = Surface(st)
-                    try {
-                        cam.createCaptureSession(listOf(surface),
-                            object : CameraCaptureSession.StateCallback() {
-                                override fun onConfigured(s: CameraCaptureSession) {
-                                    captureSession = s
-                                    val req = cam.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                                        .apply { addTarget(surface) }.build()
-                                    s.setRepeatingRequest(req, null, cameraHandler)
-                                }
-                                override fun onConfigureFailed(s: CameraCaptureSession) {}
-                            }, cameraHandler)
-                    } catch (e: Exception) { e.printStackTrace() }
-                }
-                override fun onDisconnected(cam: CameraDevice) { cam.close() }
-                override fun onError(cam: CameraDevice, error: Int) { cam.close() }
-            }, cameraHandler)
-        } catch (e: Exception) { e.printStackTrace() }
-    }
-
-    // ── Resurslarni tozalash ─────────────────────────────────────────
-
-    private fun releaseCamera() {
-        try { captureSession?.close() } catch (e: Exception) { }; captureSession = null
-        try { cameraDevice?.close()   } catch (e: Exception) { }; cameraDevice = null
-        overlayView?.let { v ->
-            Handler(Looper.getMainLooper()).post {
-                try { (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeViewImmediate(v) }
-                catch (e: Exception) { }
-            }
-        }
-        overlayView = null
-    }
-
-    private fun releaseScreen() {
+    private fun releaseAll() {
         try { mediaRecorder?.stop()    } catch (e: Exception) { }
         try { mediaRecorder?.release() } catch (e: Exception) { }
         mediaRecorder = null
@@ -297,11 +181,8 @@ class ScreenRecordService : Service() {
         outputFile?.let { if (it.exists() && it.length() == 0L) it.delete() }
     }
 
-    // ── Notification ─────────────────────────────────────────────────
-
     private fun createNotificationChannel() {
         val ch = NotificationChannel(CHANNEL_ID, "Ekran yozuvi", NotificationManager.IMPORTANCE_LOW)
-            .apply { description = "AntiTheft ekran yozuvi" }
         getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
     }
 

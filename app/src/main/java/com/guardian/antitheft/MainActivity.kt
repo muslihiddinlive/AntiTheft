@@ -92,6 +92,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, RecordingsActivity::class.java))
         }
 
+        // Yangilanishni tekshirish (qo'lda)
+        findViewById<Button>(R.id.btn_check_update).setOnClickListener {
+            UpdateChecker.check(this, silent = false)
+        }
+
+        // Ilovani ochganda jim yangilanish tekshiruvi
+        UpdateChecker.check(this, silent = true)
+
         // Ovozli signal — telefonni topish uchun
         findViewById<Button>(R.id.btn_alarm).setOnClickListener {
             startService(Intent(this, AlarmService::class.java))
