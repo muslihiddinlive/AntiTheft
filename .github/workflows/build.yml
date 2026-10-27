@@ -37,11 +37,9 @@ jobs:
           gradle assembleDebug --stacktrace --no-daemon > gradle_output.log 2>&1
           STATUS=$?
           set -e
+          cat gradle_output.log
           if [ $STATUS -ne 0 ]; then
-            echo "::group::Full gradle output"
-            cat gradle_output.log
-            echo "::endgroup::"
-            grep -iE "error|exception|FAILED|what went wrong|caused by" gradle_output.log | head -30 | while IFS= read -r line; do
+            grep -iE "error:|e: |exception|FAILED|what went wrong|caused by|unresolved" gradle_output.log | head -50 | while IFS= read -r line; do
               safe=$(echo "$line" | sed 's/%/percent/g')
               echo "::error::${safe:0:400}"
             done
