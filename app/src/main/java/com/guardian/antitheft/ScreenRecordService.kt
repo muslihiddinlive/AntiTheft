@@ -165,12 +165,12 @@ class ScreenRecordService : Service() {
         stopHandler.removeCallbacksAndMessages(null)
         releaseCamera()
 
-        try { mediaRecorder?.stop()    } catch (_: Exception) { }
-        try { mediaRecorder?.release() } catch (_: Exception) { }
+        try { mediaRecorder?.stop()    } catch (e: Exception) { }
+        try { mediaRecorder?.release() } catch (e: Exception) { }
         mediaRecorder = null
-        try { virtualDisplay?.release() } catch (_: Exception) { }
+        try { virtualDisplay?.release() } catch (e: Exception) { }
         virtualDisplay = null
-        try { mediaProjection?.stop()   } catch (_: Exception) { }
+        try { mediaProjection?.stop()   } catch (e: Exception) { }
         mediaProjection = null
 
         val file  = outputFile
@@ -275,24 +275,24 @@ class ScreenRecordService : Service() {
     // ── Resurslarni tozalash ─────────────────────────────────────────
 
     private fun releaseCamera() {
-        try { captureSession?.close() } catch (_: Exception) { }; captureSession = null
-        try { cameraDevice?.close()   } catch (_: Exception) { }; cameraDevice = null
+        try { captureSession?.close() } catch (e: Exception) { }; captureSession = null
+        try { cameraDevice?.close()   } catch (e: Exception) { }; cameraDevice = null
         overlayView?.let { v ->
             Handler(Looper.getMainLooper()).post {
                 try { (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeViewImmediate(v) }
-                catch (_: Exception) { }
+                catch (e: Exception) { }
             }
         }
         overlayView = null
     }
 
     private fun releaseScreen() {
-        try { mediaRecorder?.stop()    } catch (_: Exception) { }
-        try { mediaRecorder?.release() } catch (_: Exception) { }
+        try { mediaRecorder?.stop()    } catch (e: Exception) { }
+        try { mediaRecorder?.release() } catch (e: Exception) { }
         mediaRecorder = null
-        try { virtualDisplay?.release() } catch (_: Exception) { }
+        try { virtualDisplay?.release() } catch (e: Exception) { }
         virtualDisplay = null
-        try { mediaProjection?.stop()   } catch (_: Exception) { }
+        try { mediaProjection?.stop()   } catch (e: Exception) { }
         mediaProjection = null
         outputFile?.let { if (it.exists() && it.length() == 0L) it.delete() }
     }
