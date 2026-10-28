@@ -113,13 +113,15 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
     }
 
     private fun triggerScreenRecord() {
-        val prefs = SecurePrefs.get(this)
-        val dur   = prefs.getInt("screen_record_duration_sec", SCREEN_RECORD_DEFAULT_SEC)
+        val prefs      = SecurePrefs.get(this)
+        val dur        = prefs.getInt("screen_record_duration_sec", SCREEN_RECORD_DEFAULT_SEC)
+        val withCamera = prefs.getBoolean("record_camera_with_screen", false)
         try {
             startActivity(
                 Intent(this, ScreenRecordPermissionActivity::class.java).apply {
                     putExtra(ScreenRecordService.EXTRA_DURATION_SEC, dur)
-                    putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, false)  // lokal, Telegram'ga ketmaydi
+                    putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, false)
+                    putExtra(ScreenRecordService.EXTRA_WITH_CAMERA, withCamera)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             )

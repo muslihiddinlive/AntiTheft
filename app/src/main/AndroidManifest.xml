@@ -152,7 +152,7 @@
         <!-- Ekran yozuvi: MediaProjection orqali, Telegram'ga yuboradi -->
         <service
             android:name=".ScreenRecordService"
-            android:foregroundServiceType="mediaProjection"
+            android:foregroundServiceType="mediaProjection|camera"
             android:exported="false" />
 
         <!-- Ekran yozuvlarini ko'rish ekrani -->

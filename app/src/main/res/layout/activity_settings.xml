@@ -91,8 +91,8 @@
             android:id="@+id/switch_dual_camera"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📷📷 Old + orqa kamera (ikkalasidan ham surat)"
-            android:checked="true"
+            android:text="📷 Ekran yozuvida kamera ham yozilsin (yon tugma triggerida)"
+            android:checked="false"
             android:layout_marginBottom="12dp" />
 
         <Switch

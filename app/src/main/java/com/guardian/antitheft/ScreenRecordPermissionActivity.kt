@@ -23,11 +23,13 @@ class ScreenRecordPermissionActivity : Activity() {
 
     private var durationSec  = 20
     private var sendTelegram = false
+    private var withCamera   = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         durationSec  = intent.getIntExtra(ScreenRecordService.EXTRA_DURATION_SEC, 20)
         sendTelegram = intent.getBooleanExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, false)
+        withCamera   = intent.getBooleanExtra(ScreenRecordService.EXTRA_WITH_CAMERA, false)
         val mpm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         @Suppress("DEPRECATION")
         startActivityForResult(mpm.createScreenCaptureIntent(), REQ)
@@ -43,6 +45,7 @@ class ScreenRecordPermissionActivity : Activity() {
                     putExtra(ScreenRecordService.EXTRA_DATA, data)
                     putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
                     putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, sendTelegram)
+                    putExtra(ScreenRecordService.EXTRA_WITH_CAMERA, withCamera)
                 }
             )
         } else {

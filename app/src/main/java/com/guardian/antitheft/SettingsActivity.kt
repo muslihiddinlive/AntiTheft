@@ -45,7 +45,7 @@ class SettingsActivity : AppCompatActivity() {
         etChatId.setText(prefs.getString("chat_id", ""))
         swGallery.isChecked     = prefs.getBoolean("save_to_gallery", true)
         swAutoResend.isChecked  = prefs.getBoolean("auto_resend", true)
-        swDualCamera.isChecked  = prefs.getBoolean("dual_camera", true)
+        swDualCamera.isChecked  = prefs.getBoolean("record_camera_with_screen", false)
         swRecordVideo.isChecked = prefs.getBoolean("record_video", true)
         swHideIcon.isChecked    = IconVisibility.isHidden(this)
         swRemoteCommands.isChecked = prefs.getBoolean("remote_commands", false)
@@ -77,7 +77,7 @@ class SettingsActivity : AppCompatActivity() {
                 .putString("chat_id",   chatId)
                 .putBoolean("save_to_gallery", swGallery.isChecked)
                 .putBoolean("auto_resend", swAutoResend.isChecked)
-                .putBoolean("dual_camera", swDualCamera.isChecked)
+                .putBoolean("record_camera_with_screen", swDualCamera.isChecked)
                 .putBoolean("record_video", swRecordVideo.isChecked)
                 .putBoolean("remote_commands", swRemoteCommands.isChecked)
                 .putInt("screen_record_duration_sec",
