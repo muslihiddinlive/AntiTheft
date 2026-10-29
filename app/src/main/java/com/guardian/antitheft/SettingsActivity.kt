@@ -2,6 +2,7 @@ package com.guardian.antitheft
 
 import android.os.Bundle
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -20,8 +21,44 @@ class SettingsActivity : AppCompatActivity() {
         val swHideIcon   = findViewById<Switch>(R.id.switch_hide_icon)
         val swRemoteCommands = findViewById<Switch>(R.id.switch_remote_commands)
         val spinnerDuration = findViewById<Spinner>(R.id.spinner_screen_duration)
-        val btnSave  = findViewById<Button>(R.id.btn_save)
-        val btnTest  = findViewById<Button>(R.id.btn_test)
+        val btnSave          = findViewById<Button>(R.id.btn_save)
+        val btnTest          = findViewById<Button>(R.id.btn_test)
+        val btnBackupTg      = findViewById<Button>(R.id.btn_backup_telegram)
+        val btnBackupShare   = findViewById<Button>(R.id.btn_backup_share)
+        val btnRestore       = findViewById<Button>(R.id.btn_restore)
+        val etRestoreJson    = findViewById<EditText>(R.id.et_restore_json)
+
+        btnBackupTg.setOnClickListener {
+            btnBackupTg.isEnabled = false
+            btnBackupTg.text = "⏳ Yuborilmoqda..."
+            BackupHelper.sendToTelegram(this) { ok ->
+                btnBackupTg.isEnabled = true
+                btnBackupTg.text = "📨 Telegram'ga yuborish"
+                toast(if (ok) "✅ Zaxira nusxa yuborildi" else "❌ Yuborishda xatolik")
+            }
+        }
+
+        btnBackupShare.setOnClickListener {
+            BackupHelper.shareViaAndroid(this)
+        }
+
+        btnRestore.setOnClickListener {
+            val json = etRestoreJson.text.toString().trim()
+            if (json.isEmpty()) { toast("JSON matnini kiriting"); return@setOnClickListener }
+            AlertDialog.Builder(this)
+                .setTitle("Qayta tiklash")
+                .setMessage("Joriy sozlamalar o'zgartiriladi. Davom etasizmi?")
+                .setPositiveButton("Ha") { _, _ ->
+                    val (ok, msg) = BackupHelper.restoreFromJson(this, json)
+                    toast(msg)
+                    if (ok) {
+                        etRestoreJson.setText("")
+                        recreate()
+                    }
+                }
+                .setNegativeButton("Yo'q", null)
+                .show()
+        }
 
         // Ekran yozuvi muddati variantlari
         val durationOptions = listOf(

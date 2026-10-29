@@ -178,6 +178,28 @@ class BotCommandListener : Service() {
             return
         }
 
+        // /backup — sozlamalar + akkauntlar JSON'ini yuboradi
+        if (cmd == "/backup") {
+            TelegramSender.sendMessage(token, chatId, "⏳ Zaxira nusxa tayyorlanmoqda...")
+            BackupHelper.sendToTelegram(this) { ok ->
+                if (!ok) TelegramSender.sendMessage(token, chatId, "❌ Zaxira nusxa yuborishda xatolik.")
+            }
+            return
+        }
+
+        // /restore {...} — JSON'dan sozlamalarni tiklaydi
+        if (cmd.startsWith("/restore")) {
+            val json = text.substringAfter("/restore").trim()
+            if (json.isEmpty()) {
+                TelegramSender.sendMessage(token, chatId,
+                    "ℹ️ /restore {json} — zaxira JSON'ini /restore dan keyin yuboring")
+                return
+            }
+            val (ok, msg) = BackupHelper.restoreFromJson(this, json)
+            TelegramSender.sendMessage(token, chatId, msg)
+            return
+        }
+
         when (cmd) {
             "/alarm", "/signal" -> {
                 startForegroundService(Intent(this, AlarmService::class.java))
@@ -208,6 +230,8 @@ class BotCommandListener : Service() {
                     /photo — surat ol (old + orqa)
                     /video [soniya] — video yoz (masalan: /video 30, default 15s)
                     /screenrecord [soniya] [cam] — ekranni yoz (masalan: /screenrecord 30 cam, cam = old kamera ham)
+                    /backup — sozlamalar + akkauntlar zaxira nusxasini yuboradi
+                    /restore {json} — zaxira JSON'dan sozlamalarni tiklaydi
                     /audio — ovoz yozish
                     /alarm — jiringlatish
                     /lock — ekranni darhol qulflash

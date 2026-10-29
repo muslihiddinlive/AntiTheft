@@ -38,6 +38,8 @@
         android:minSdkVersion="34" />
     <!-- Auto-update: yangi APK o'rnatish uchun -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Zaxira nusxa: qurilmadagi akkauntlar ro'yxatini olish uchun -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
     <!-- Bildirishnomalar (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
