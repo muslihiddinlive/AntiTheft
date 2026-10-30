@@ -178,11 +178,14 @@ class BotCommandListener : Service() {
             return
         }
 
-        // /backup — sozlamalar + akkauntlar JSON'ini yuboradi
+        // /backup — media fayllarni Drive + Telegram'ga zaxiralaydi
         if (cmd == "/backup") {
-            TelegramSender.sendMessage(token, chatId, "⏳ Zaxira nusxa tayyorlanmoqda...")
-            BackupHelper.sendToTelegram(this) { ok ->
-                if (!ok) TelegramSender.sendMessage(token, chatId, "❌ Zaxira nusxa yuborishda xatolik.")
+            if (BackupJob.isRunning) {
+                TelegramSender.sendMessage(token, chatId, "⚠️ Backup allaqachon jarayonda, kuting...")
+            } else {
+                TelegramSender.sendMessage(token, chatId,
+                    "⏳ Backup boshlandi...\n≥20 MB → Google Drive, <20 MB → Telegram")
+                BackupJob.start(this)
             }
             return
         }

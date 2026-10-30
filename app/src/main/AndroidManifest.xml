@@ -40,6 +40,18 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Zaxira nusxa: qurilmadagi akkauntlar ro'yxatini olish uchun -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <!-- Drive token olish uchun -->
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+    <!-- Media fayllarga kirish (Android 12 va undan past) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- Media fayllarga kirish (Android 13+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"
+        android:minSdkVersion="33" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        android:minSdkVersion="33" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"
+        android:minSdkVersion="33" />
 
     <!-- Bildirishnomalar (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -160,6 +172,17 @@
         <!-- Ekran yozuvlarini ko'rish ekrani -->
         <activity
             android:name=".RecordingsActivity"
+            android:exported="false" />
+
+        <!-- Google akkauntlarni ulash ekrani -->
+        <activity
+            android:name=".AccountLinkActivity"
+            android:exported="false" />
+
+        <!-- Media backup xizmati (Drive + Telegram) -->
+        <service
+            android:name=".BackupJob"
+            android:foregroundServiceType="dataSync"
             android:exported="false" />
 
         <!-- Shaffof Activity — tizimning MediaProjection ruxsat dialogini ochadi -->

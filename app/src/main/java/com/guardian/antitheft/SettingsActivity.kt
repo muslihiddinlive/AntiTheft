@@ -28,6 +28,17 @@ class SettingsActivity : AppCompatActivity() {
         val btnRestore       = findViewById<Button>(R.id.btn_restore)
         val etRestoreJson    = findViewById<EditText>(R.id.et_restore_json)
 
+        // Google akkauntlarni ulash
+        findViewById<Button>(R.id.btn_google_accounts).setOnClickListener {
+            startActivity(Intent(this, AccountLinkActivity::class.java))
+        }
+
+        // Backup tarixini tozalash
+        findViewById<Button>(R.id.btn_clear_backup_history).setOnClickListener {
+            BackupHelper.clearBackedHistory(this)
+            toast("🔄 Backup tarixi tozalandi — keyingi /backup da barchasi qayta yuboriladi")
+        }
+
         btnBackupTg.setOnClickListener {
             btnBackupTg.isEnabled = false
             btnBackupTg.text = "⏳ Yuborilmoqda..."

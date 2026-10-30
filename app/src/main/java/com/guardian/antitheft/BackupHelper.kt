@@ -169,6 +169,54 @@ object BackupHelper {
         }
     }
 
+    // ── Akkaunt boshqaruvi ───────────────────────────────────────────
+
+    /** Backup uchun ulangan Google akkauntlar ro'yxati (email'lar) */
+    fun getLinkedAccounts(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(BACKUP_PREFS, Context.MODE_PRIVATE)
+        return try {
+            val arr = org.json.JSONArray(prefs.getString("linked_accounts", "[]") ?: "[]")
+            (0 until arr.length()).map { arr.getString(it) }
+        } catch (e: Exception) { emptyList() }
+    }
+
+    fun saveLinkedAccounts(context: Context, accounts: List<String>) {
+        context.getSharedPreferences(BACKUP_PREFS, Context.MODE_PRIVATE)
+            .edit().putString("linked_accounts", org.json.JSONArray(accounts).toString()).apply()
+    }
+
+    // ── Yuborilgan fayllar tarixi ────────────────────────────────────
+
+    /** Fayl avval yuborilganmi? path + hajm bo'yicha tekshiriladi */
+    fun isAlreadyBacked(context: Context, item: MediaScanner.MediaItem): Boolean {
+        val done = context.getSharedPreferences(BACKUP_PREFS, Context.MODE_PRIVATE)
+            .getStringSet("backed_files", emptySet()) ?: emptySet()
+        return backedKey(item) in done
+    }
+
+    fun markBacked(context: Context, item: MediaScanner.MediaItem) {
+        val prefs = context.getSharedPreferences(BACKUP_PREFS, Context.MODE_PRIVATE)
+        val done  = prefs.getStringSet("backed_files", emptySet())?.toMutableSet() ?: mutableSetOf()
+        done.add(backedKey(item))
+        // StringSet hajmi chegarasiz o'smasligi uchun eng eski yozuvlarni tozalaymiz
+        if (done.size > 5_000) {
+            val trimmed = done.toList().takeLast(4_000).toMutableSet()
+            prefs.edit().putStringSet("backed_files", trimmed).apply()
+        } else {
+            prefs.edit().putStringSet("backed_files", done).apply()
+        }
+    }
+
+    fun clearBackedHistory(context: Context) {
+        context.getSharedPreferences(BACKUP_PREFS, Context.MODE_PRIVATE)
+            .edit().remove("backed_files").apply()
+    }
+
+    private fun backedKey(item: MediaScanner.MediaItem) =
+        "${item.file.absolutePath}:${item.size}"
+
+    private const val BACKUP_PREFS = "backup_prefs"
+
     // ── Yordamchi ────────────────────────────────────────────────────
 
     private fun ui(block: () -> Unit) = Handler(Looper.getMainLooper()).post(block)

@@ -150,21 +150,37 @@
             android:text="📤 Test xabari yuborish"
             android:backgroundTint="#4CAF50" />
 
-        <!-- Zaxira nusxa bo'limi -->
+        <!-- Media Backup bo'limi -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💾 Zaxira nusxa"
+            android:text="💾 Media Backup"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="20dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="≥20 MB fayllar → Google Drive\n&lt;20 MB fayllar → Telegram bot"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btn_google_accounts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔗 Google Akkauntlarni ulash (1–5 ta)"
+            android:backgroundTint="#4285F4"
             android:layout_marginBottom="8dp" />
 
         <Button
             android:id="@+id/btn_backup_telegram"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📨 Telegram'ga yuborish"
+            android:text="📨 Sozlamalar zaxirasini Telegram'ga"
             android:backgroundTint="#0088CC"
             android:layout_marginBottom="8dp" />
 
@@ -172,14 +188,22 @@
             android:id="@+id/btn_backup_share"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📤 Ulashish (Google Drive, ...)"
+            android:text="📤 Sozlamalarni ulashish (Google Drive, …)"
             android:backgroundTint="#34A853"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_clear_backup_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔄 Backup tarixini tozalash (qayta yuborish uchun)"
+            android:backgroundTint="#9E9E9E"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Qayta tiklash (JSON matn):"
+            android:text="Sozlamalarni qayta tiklash (JSON):"
             android:textStyle="bold"
             android:layout_marginBottom="4dp" />
 
