@@ -31,13 +31,13 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
-> Task :app:desugarDebugFileDependencies
 > Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
 > Task :app:processDebugResources
 > Task :app:mergeExtDexDebug
-> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeLibDexDebug
+> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:validateSigningDebug
@@ -45,7 +45,7 @@ Daemon will be stopped at the end of the build
 > Task :app:writeDebugSigningConfigVersions
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/AntiTheft/AntiTheft/app/src/main/java/com/guardian/antitheft/RecordingsActivity.kt:3:22 Unresolved reference: MediaController
+e: file:///home/runner/work/AntiTheft/AntiTheft/app/src/main/java/com/guardian/antitheft/SettingsActivity.kt:33:27 Unresolved reference: Intent
 
 FAILURE: Build failed with an exception.
 
@@ -253,5 +253,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 1m 21s
+BUILD FAILED in 1m 25s
 26 actionable tasks: 26 executed
