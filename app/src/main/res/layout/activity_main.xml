@@ -51,6 +51,24 @@
         android:text="⚙️ Telegram Sozlamalari"
         android:layout_marginBottom="12dp" />
 
+    <!-- Ekran yozuvlarini ko'rish -->
+    <Button
+        android:id="@+id/btn_recordings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📹 Ekran Yozuvlari"
+        android:backgroundTint="#607D8B"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Yangilanishni tekshirish -->
+    <Button
+        android:id="@+id/btn_check_update"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔄 Yangilanishni tekshirish"
+        android:backgroundTint="#455A64"
+        android:layout_marginBottom="8dp" />
+
     <!-- Telefonni topish uchun ovozli signal -->
     <Button
         android:id="@+id/btn_alarm"

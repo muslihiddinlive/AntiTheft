@@ -21,7 +21,7 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install required SDK packages
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
@@ -37,16 +37,29 @@ jobs:
           gradle assembleDebug --stacktrace --no-daemon > gradle_output.log 2>&1
           STATUS=$?
           set -e
+          cat gradle_output.log
           if [ $STATUS -ne 0 ]; then
-            echo "::group::Full gradle output"
-            cat gradle_output.log
-            echo "::endgroup::"
-            grep -iE "error|exception|FAILED|what went wrong|caused by" gradle_output.log | head -30 | while IFS= read -r line; do
+            # Xato logni repo'ga yozamiz — raw.githubusercontent.com orqali o'qiladi
+            mkdir -p releases
+            cp gradle_output.log releases/last_build_error.log
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add releases/last_build_error.log
+            git commit -m "ci: build xato log [skip ci]" || true
+            git push || true
+            grep -iE "error:|e: |exception|FAILED|what went wrong|caused by|unresolved" gradle_output.log | head -50 | while IFS= read -r line; do
               safe=$(echo "$line" | sed 's/%/percent/g')
               echo "::error::${safe:0:400}"
             done
             exit $STATUS
           fi
+
+      - name: Upload gradle log (hatto build muvaffaqiyatsiz bo'lsa ham)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: gradle_output.log
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -54,12 +67,27 @@ jobs:
           name: AntiTheft-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Commit APK into repo (for direct download)
+      - name: Commit APK + version.json into repo (for direct download)
         run: |
           mkdir -p releases
           cp app/build/outputs/apk/debug/app-debug.apk releases/AntiTheft-debug.apk
+
+          # version.json — UpdateChecker bu faylni o'qib yangilanish borligini tekshiradi
+          VERSION_CODE=$(grep 'versionCode' app/build.gradle | grep -v '//' | tr -dc '0-9')
+          VERSION_NAME=$(grep 'versionName' app/build.gradle | grep -v '//' | sed 's/.*"\(.*\)".*/\1/' | head -1)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          APK_URL="https://raw.githubusercontent.com/muslihiddinlive/AntiTheft/${BRANCH}/releases/AntiTheft-debug.apk"
+          cat > version.json << VEOF
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${VERSION_NAME}",
+            "apkUrl": "${APK_URL}",
+            "changelog": "Ekran yozuvi (lokal + bot), Yozuvlar ekrani, auto-update"
+          }
+          VEOF
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add releases/AntiTheft-debug.apk
+          git add releases/AntiTheft-debug.apk version.json
           git commit -m "Update built APK [skip ci]" || echo "No changes to commit"
           git push

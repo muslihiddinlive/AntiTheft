@@ -91,8 +91,8 @@
             android:id="@+id/switch_dual_camera"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📷📷 Old + orqa kamera (ikkalasidan ham surat)"
-            android:checked="true"
+            android:text="📷 Ekran yozuvida kamera ham yozilsin (yon tugma triggerida)"
+            android:checked="false"
             android:layout_marginBottom="12dp" />
 
         <Switch
@@ -119,6 +119,21 @@
             android:checked="false"
             android:layout_marginBottom="24dp" />
 
+        <!-- Ekran yozuvi muddati (lokal trigger uchun) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🕒 Ekran yozuvi muddati (yon tugma orqali)"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/spinner_screen_duration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp" />
+
         <!-- Saqlash -->
         <Button
             android:id="@+id/btn_save"
@@ -135,6 +150,82 @@
             android:text="📤 Test xabari yuborish"
             android:backgroundTint="#4CAF50" />
 
+        <!-- Media Backup bo'limi -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="💾 Media Backup"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="≥20 MB fayllar → Google Drive\n&lt;20 MB fayllar → Telegram bot"
+            android:textSize="12sp"
+            android:textColor="#888888"
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btn_google_accounts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔗 Google Akkauntlarni ulash (1–5 ta)"
+            android:backgroundTint="#4285F4"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_backup_telegram"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📨 Sozlamalar zaxirasini Telegram'ga"
+            android:backgroundTint="#0088CC"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_backup_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📤 Sozlamalarni ulashish (Google Drive, …)"
+            android:backgroundTint="#34A853"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_clear_backup_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔄 Backup tarixini tozalash (qayta yuborish uchun)"
+            android:backgroundTint="#9E9E9E"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sozlamalarni qayta tiklash (JSON):"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <EditText
+            android:id="@+id/et_restore_json"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Zaxira JSON matnini bu yerga joylashtiring..."
+            android:minLines="3"
+            android:maxLines="6"
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_restore"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📥 Qayta tiklash"
+            android:backgroundTint="#FF5722"
+            android:layout_marginBottom="20dp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -142,7 +233,7 @@
             android:textSize="12sp"
             android:textColor="#888888"
             android:gravity="center"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="4dp" />
 
     </LinearLayout>
 </ScrollView>

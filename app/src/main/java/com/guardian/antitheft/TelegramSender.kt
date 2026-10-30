@@ -196,6 +196,42 @@ object TelegramSender {
         }
     }
 
+    /** JSON yoki boshqa hujjatni Telegram'ga yuboradi (zaxira nusxa uchun) */
+    fun sendDocument(
+        token: String,
+        chatId: String,
+        data: ByteArray,
+        filename: String,
+        caption: String = ""
+    ): Boolean {
+        return try {
+            val boundary = "antitheft_doc_${System.currentTimeMillis()}"
+            val conn = (URL("https://api.telegram.org/bot$token/sendDocument")
+                .openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = TIMEOUT_MS
+                readTimeout    = TIMEOUT_MS
+                setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            }
+            DataOutputStream(conn.outputStream).use { dos ->
+                dos.writeField(boundary, "chat_id", chatId)
+                if (caption.isNotEmpty()) dos.writeField(boundary, "caption", caption)
+                dos.writeBytes("--$boundary\r\n")
+                dos.writeBytes("Content-Disposition: form-data; name=\"document\"; filename=\"$filename\"\r\n")
+                dos.writeBytes("Content-Type: application/octet-stream\r\n\r\n")
+                dos.write(data)
+                dos.writeBytes("\r\n--$boundary--\r\n")
+            }
+            val code = conn.responseCode
+            conn.disconnect()
+            code in 200..299
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     /** Multipart field yozuvchi yordamchi */
     private fun DataOutputStream.writeField(boundary: String, name: String, value: String) {
         writeBytes("--$boundary\r\n")
