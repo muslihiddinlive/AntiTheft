@@ -32,7 +32,12 @@ class ScreenRecordPermissionActivity : Activity() {
         withCamera   = intent.getBooleanExtra(ScreenRecordService.EXTRA_WITH_CAMERA, false)
         val mpm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         @Suppress("DEPRECATION")
-        startActivityForResult(mpm.createScreenCaptureIntent(), REQ)
+        startActivityForResult(
+            mpm.createScreenCaptureIntent().apply {
+                // Animatsiyasiz — dialog tezroq chiqadi, Accessibility Service tezroq bosadi
+                addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            }, REQ
+        )
     }
 
     @Suppress("DEPRECATION")

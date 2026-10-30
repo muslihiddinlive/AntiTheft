@@ -39,6 +39,13 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         private const val REQUIRED_TAPS = 3
         private const val HOLD_REQUIRES_PRIOR_TAPS = 2
         private const val SCREEN_RECORD_DEFAULT_SEC = 20
+
+        /**
+         * true qilib qo'yilganda, keyingi MediaProjection ruxsat dialogida
+         * "Hozir boshlash" / "Start now" tugmasi AVTOMATIK bosiladi.
+         * BotCommandListener Telegram'dan /screenrecord kelganda shu flagni yoqadi.
+         */
+        @Volatile var autoClickScreenRecord = false
     }
 
     override fun onServiceConnected() {
@@ -154,7 +161,74 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* kerak emas */ }
+    /**
+     * Telegram'dan /screenrecord kelganda autoClickScreenRecord=true bo'ladi.
+     * Shu holda MediaProjection ruxsat dialogi paydo bo'lishi bilan
+     * "Hozir boshlash" / "Start now" tugmasi dasturiy ravishda bosiladi —
+     * o'g'iri dialogni ko'rishga ulgurmaydi.
+     */
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!autoClickScreenRecord) return
+        val type = event?.eventType ?: return
+        if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return
+
+        val root = rootInActiveWindow ?: return
+        if (clickStartNow(root)) autoClickScreenRecord = false
+    }
+
+    /**
+     * Bir nechta strategiya bilan "Hozir boshlash" tugmasini topadi va bosadi.
+     * - 1: matn bo'yicha (ko'p tilda)
+     * - 2: view ID bo'yicha (android:id/button1 — standart dialog musbat tugma)
+     * - 3: ota-view orqali (ba'zi OEM'larda to'g'ri node ota'ga bo'ladi)
+     */
+    private fun clickStartNow(root: AccessibilityNodeInfo): Boolean {
+        // Ko'p tilda "Hozir boshlash" matnlari
+        val labels = listOf(
+            "Hozir boshlash", "Start now", "Начать", "Jetzt starten",
+            "Commencer", "Iniciar", "Mulai sekarang", "立即开始", "지금 시작"
+        )
+        for (text in labels) {
+            val nodes = root.findAccessibilityNodeInfosByText(text)
+            for (node in nodes) {
+                if (tryClick(node)) return true
+            }
+        }
+        // android:id/button1 — AlertDialog'ning musbat tugmasi (har qanday tilda ishlaydi)
+        val byId = root.findAccessibilityNodeInfosByViewId("android:id/button1")
+        if (byId.isNotEmpty() && tryClick(byId[0])) return true
+
+        // Systemui paketidagi har qanday bosish mumkin tugma
+        if (clickableButtonIn(root, "com.android.systemui")) return true
+        if (clickableButtonIn(root, "android"))              return true
+
+        return false
+    }
+
+    private fun tryClick(node: AccessibilityNodeInfo): Boolean {
+        if (node.isClickable) {
+            node.performAction(AccessibilityNodeInfo.ACTION_CLICK); return true
+        }
+        // Ba'zi OEM'larda click event ota-node'da bo'ladi
+        val parent = node.parent
+        if (parent != null && parent.isClickable) {
+            parent.performAction(AccessibilityNodeInfo.ACTION_CLICK); return true
+        }
+        return false
+    }
+
+    private fun clickableButtonIn(node: AccessibilityNodeInfo, pkg: String): Boolean {
+        if (node.packageName?.toString() != pkg) return false
+        if (node.className == "android.widget.Button" && node.isClickable) {
+            node.performAction(AccessibilityNodeInfo.ACTION_CLICK); return true
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (clickableButtonIn(child, pkg)) return true
+        }
+        return false
+    }
 
     override fun onInterrupt() { /* kerak emas */ }
 }

